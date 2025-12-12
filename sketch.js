@@ -1283,9 +1283,13 @@ function mousePressed() {
 
 function keyPressed() {
   // Spacebar toggles: if at home, starts demo mode; if in demo, returns to home
+  // - When at HOME (demoMode = false): Press spacebar → Starts demo mode and loads audio
+  // - When in DEMO (demoMode = true): Press spacebar → Stops music, returns to HOME, waits
   if (key === ' ' || keyCode === 32) {
+    console.log('Spacebar pressed, demoMode:', demoMode);
     if (!demoMode) {
       // ACTIVATE demo mode - start from home
+      console.log('Starting demo mode from home');
       demoMode = true;
       
       // Hide credits footer when starting demo
@@ -1401,18 +1405,19 @@ function keyPressed() {
       const isCasaPlaying = audio && (currentAudioFile === 'casa_detroit_2025.mp3' || (audio.src && audio.src.includes('casa_detroit_2025.mp3')));
       
       if (isCasaPlaying && audio) {
-        // If casa_detroit_2025.mp3 is already loaded, restart from beginning
+        // If casa_detroit_2025.mp3 is already loaded, restart from beginning and play
         try {
-          audio.currentTime = 0; // Restart from beginning
-          if (audio.paused) {
-            audioContext.resume().then(() => {
-              audio.play().catch(e => {
-                console.error('Error playing audio:', e);
-              });
-            }).catch(e => {
+          audio.currentTime = 0; // Reset to beginning
+          // Resume audio context if suspended
+          if (audioContext.state === 'suspended') {
+            audioContext.resume().catch(e => {
               console.error('Error resuming context:', e);
             });
           }
+          // Play audio
+          audio.play().catch(e => {
+            console.error('Error playing audio:', e);
+          });
         } catch(e) {
           console.error('Error with existing audio:', e);
           // Fall through to load new file
@@ -1431,6 +1436,8 @@ function keyPressed() {
       }
     } else {
       // DEACTIVATE demo mode - return to HOME state (geometries_only)
+      // This happens when spacebar is pressed while in demo mode
+      console.log('Returning to home from demo mode');
       demoMode = false;
       
       // Show credits footer when returning to home
@@ -1457,8 +1464,9 @@ function keyPressed() {
       showRobots = homeState.robots;
       showLasers = homeState.lasers;
       showSmoke = homeState.smoke;
+      showCentralCircles = true; // Home state shows central circles (geometries)
       
-      // Fade out all elements
+      // Fade out all elements except central circles
       carsFadeTarget = 0.0;
       peopleFadeTarget = 0.0;
       parachutistsFadeTarget = 0.0;
@@ -1474,21 +1482,30 @@ function keyPressed() {
       robotsFadeTarget = 0.0;
       lasersFadeTarget = 0.0;
       smokeFadeTarget = 0.0;
+      centralCirclesFadeTarget = 1.0; // Ensure central circles are visible at home
       
       // Reset background to home state hue
       window.selectedBackgroundHue = homeState.backgroundHue;
       
-      // Reset demo state variables
+      // Reset demo state variables completely
       globalStateIndex = 0;
       globalAccumulatedStates = 1;
       demoComplexity = 2;
       demoRandomMode = false;
+      globalLastStateChangeTime = 0; // Reset timing
+      demoStateStartTime = 0; // Reset demo state timing
+      demoStateDuration = 0; // Reset duration
+      lastGlobalBeatTime = 0; // Reset beat timing
       
-      // Pause audio when returning to home
-      if (audio && !audio.paused) {
-        audio.pause();
+      // Stop music completely and reset to beginning when returning to home
+      if (audio) {
+        audio.pause(); // Stop the music
+        audio.currentTime = 0; // Reset to beginning so it's ready to play again
       }
+      
+      console.log('Returned to HOME state - demoMode:', demoMode, 'showCentralCircles:', showCentralCircles);
     }
+    return false; // Prevent default spacebar behavior (scrolling)
   }
   
   // Keyboard controls mapped to 1234567890 and qwerty
@@ -1528,6 +1545,27 @@ function keyPressed() {
       lastParachutistSpawnTime = 0;
     }
   } else if (key === '4') {
+    // Toggle helicopters with fade
+    showHelicopters = !showHelicopters;
+    helicoptersFadeTarget = showHelicopters ? 1.0 : 0.0;
+    if (showHelicopters) {
+      // Spawn ONE helicopter - clean and simple
+      helicopters = []; // Clear first
+      heliLastX = null; // Reset position tracking
+      lastHelicopterFrame = -1; // Reset frame tracking
+      helicopters.push({
+        x: width * 0.3,
+        y: height * 0.25,
+        speed: 0.5,
+        moveDirection: 0, // 0=right, 2=left
+        turnDistance: 600, // Increased for broader flight trajectory
+        distanceTraveled: 0,
+        hue: 200,
+        scale: 6.0,
+        propPhase: 0
+      });
+    }
+  } else if (key === '5') {
     // Toggle helicopters with fade
     showHelicopters = !showHelicopters;
     helicoptersFadeTarget = showHelicopters ? 1.0 : 0.0;
