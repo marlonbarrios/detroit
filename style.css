@@ -1,0 +1,10 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  cursor: none; /* Hide cursor */
+}
+
+canvas {
+  display: block;
+  cursor: none !important; /* Hide cursor on canvas */
+}
