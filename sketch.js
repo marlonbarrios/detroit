@@ -1,4 +1,4 @@
-1//Concentric Hues
+//CASA DETROIT 2026
 //code by Marlon Barrios Solano
 // Inspired by matt DesLauriers
 
@@ -79,7 +79,7 @@ let globalAccumulatedStates = 1; // Number of states to cycle through (starts at
 let globalLastStateChangeTime = 0; // Track last state change
 let globalStateChangeInterval = 10000; // Change states every 10 seconds max
 let demoMode = false; // Demo mode flag - when true, uses random/combined states
-let demoComplexity = 1; // Demo complexity level (starts at 1, progressively accumulates to all elements)
+let demoComplexity = 2; // Demo complexity level (starts at 2 minimum, progressively accumulates)
 let demoRandomMode = false; // When true, demo has reached all states and now randomizes
 let lastGlobalBeatTime = 0; // Track last beat for demo mode
 let demoStateStartTime = 0; // Track when current demo state started
@@ -470,7 +470,7 @@ function initializePeople() {
 
 function initializeRenaissanceCenter() {
   renaissanceCenter = {
-    x: width * 0.5, // Center of screen
+    x: width * 0.25, // Off-center (left side) - never in the middle
     baseY: height * 0.85,
     currentHeight: 0,
     targetHeight: 0,
@@ -531,8 +531,12 @@ function initializeRobots() {
     while (!validPosition && attempts < 100) {
       // Random x positions across screen (with margins)
       xPos = random(width * 0.15, width * 0.85);
-      // Random y positions in lower 60% of screen (varying heights)
-      yPos = random(height * 0.5, height * 0.85);
+      // Random y positions within 10 pixels of bottom edge
+      // Robot extends from y=-52.5 (head top) to y=35 (pedestal bottom) in local coords
+      // With max scale of 3.0, bottom extends 35*3.0 = 105px below robot.y
+      // To keep whole robot visible: robot.y + 105 <= height - 10, so robot.y <= height - 115
+      const maxRobotBottomOffset = 35 * 3.0; // Maximum extension below robot center (max scale)
+      yPos = random(height - maxRobotBottomOffset - 20, height - maxRobotBottomOffset - 10); // Within 10 pixels of bottom, whole body visible
       
       // Check if this position is far enough from all existing positions
       validPosition = true;
@@ -550,11 +554,13 @@ function initializeRobots() {
     
     // If we couldn't find a non-overlapping position after many attempts, use a grid-based fallback
     if (!validPosition) {
-      // Fallback: use evenly spaced positions
+      // Fallback: use evenly spaced positions within 10 pixels of bottom edge
       const gridCols = 3;
       const colIndex = i % gridCols;
       xPos = width * (0.2 + colIndex * 0.3);
-      yPos = height * (0.6 + Math.floor(i / gridCols) * 0.15);
+      // Position robots within 10 pixels of bottom, ensuring whole body is visible
+      const maxRobotBottomOffset = 35 * 3.0; // Maximum extension below robot center (max scale)
+      yPos = height - maxRobotBottomOffset - 10 - (i % gridCols) * 3; // Vary slightly but stay near bottom
     }
     
     positions.push({ x: xPos, y: yPos });
@@ -607,7 +613,7 @@ function initializeDrones() {
     y: height * 0.5, // Center vertically
     speed: 0.4, // Slow speed
     moveDirection: 0, // 0=right, 1=down, 2=left, 3=up
-    turnDistance: 150, // Distance before turning
+    turnDistance: 300, // Distance before turning (increased for wider flight scope)
     distanceTraveled: 0, // Track distance on current path
     hue: 220,
     scale: 4.5, // Large and visible
@@ -662,7 +668,7 @@ function spawnVintageCar() {
     hue: color.hue,
     saturation: color.sat,
     lightness: color.light,
-    scale: random(1.5, 2.5), // BIGGER CARS
+    scale: random(1.5, 2.5) * 1.3, // 30% larger cars (1.95 to 3.25)
     phase: random(0, TWO_PI),
     wheelRotation: 0,
     lastBassLevel: 0,
@@ -1275,8 +1281,8 @@ function keyPressed() {
     // Activate demo mode when spacebar is pressed
     if (!demoMode) {
       demoMode = true;
-      // Reset demo state when entering demo mode - start from 1 state
-      demoComplexity = 1; // Start with 1 state
+      // Reset demo state when entering demo mode - start with minimum 2 states
+      demoComplexity = 2; // Start with minimum 2 states
       demoRandomMode = false; // Start in progressive mode
       globalLastStateChangeTime = millis();
       lastGlobalBeatTime = millis();
@@ -1327,6 +1333,22 @@ function keyPressed() {
       }
       if (showParachutists && parachutists.length === 0) {
         initializeParachutists();
+      }
+      if (showHelicopters && (!helicopters || helicopters.length === 0)) {
+        helicopters = [];
+        heliLastX = null;
+        lastHelicopterFrame = -1;
+        helicopters.push({
+          x: width * 0.3,
+          y: height * 0.25,
+          speed: 0.5,
+          moveDirection: 0,
+          turnDistance: 600, // Increased for broader flight trajectory
+          distanceTraveled: 0,
+          hue: 200,
+          scale: 6.0,
+          propPhase: 0
+        });
       }
       if (showRobots && robots.length === 0) {
         initializeRobots();
@@ -1410,7 +1432,7 @@ function keyPressed() {
         y: height * 0.25,
         speed: 0.5,
         moveDirection: 0, // 0=right, 2=left
-        turnDistance: 200,
+        turnDistance: 600, // Increased for broader flight trajectory
         distanceTraveled: 0,
         hue: 200,
         scale: 6.0, // Double the size
@@ -1498,7 +1520,7 @@ function keyPressed() {
         y: height * 0.5, // Center vertically
         speed: 0.4, // Slow speed
         moveDirection: 0, // 0=right, 1=down, 2=left, 3=up
-        turnDistance: 150, // Distance before turning
+        turnDistance: 300, // Distance before turning (increased for wider flight scope)
         distanceTraveled: 0, // Track distance on current path
         hue: 220,
         scale: 4.5, // Large and visible
@@ -1611,8 +1633,8 @@ function keyPressed() {
         while (!validPosition && attempts < 100) {
           // Random x positions across screen (with margins)
           xPos = random(width * 0.15, width * 0.85);
-          // Random y positions in lower 60% of screen (varying heights)
-          yPos = random(height * 0.5, height * 0.85);
+          // Random y positions within 10 pixels of bottom edge (accounting for robot height ~35px)
+          yPos = random(height - 45, height - 10); // Within 10 pixels of bottom edge
           
           // Check if this position is far enough from all existing positions
           validPosition = true;
@@ -1630,11 +1652,13 @@ function keyPressed() {
         
         // If we couldn't find a non-overlapping position after many attempts, use a grid-based fallback
         if (!validPosition) {
-          // Fallback: use evenly spaced positions
+          // Fallback: use evenly spaced positions within 10 pixels of bottom edge
           const gridCols = 3;
           const colIndex = i % gridCols;
           xPos = width * (0.2 + colIndex * 0.3);
-          yPos = height * (0.6 + Math.floor(i / gridCols) * 0.15);
+          // Position robots within 10 pixels of bottom, ensuring whole body is visible
+          const maxRobotBottomOffset = 35 * 3.0; // Maximum extension below robot center (max scale)
+          yPos = height - maxRobotBottomOffset - 10 - (i % gridCols) * 3; // Vary slightly but stay near bottom
         }
         
         positions.push({ x: xPos, y: yPos });
@@ -1810,8 +1834,8 @@ function keyPressed() {
     // Toggle demo mode
     demoMode = !demoMode;
     if (demoMode) {
-      // Reset demo state when entering demo mode - start from 1 state
-      demoComplexity = 1; // Start with 1 state
+      // Reset demo state when entering demo mode - start with minimum 2 states
+      demoComplexity = 2; // Start with minimum 2 states
       demoRandomMode = false; // Start in progressive mode
       globalLastStateChangeTime = millis();
       lastGlobalBeatTime = millis();
@@ -2013,10 +2037,11 @@ function draw() {
       const maxStatesAllowed = 4; // Maximum 4 states including central circles
       
       if (!demoRandomMode) {
-        // PROGRESSIVE MODE: Start with 1 state, progressively accumulate to max 4 states
+        // PROGRESSIVE MODE: Start with minimum 2 states, progressively accumulate to max 4 states
         // Increase complexity by 1 each state change until reaching max 4 states
+        // Ensure minimum of 2 states always
         if (demoComplexity < maxStatesAllowed) {
-          demoComplexity = min(demoComplexity + 1, maxStatesAllowed);
+          demoComplexity = max(2, min(demoComplexity + 1, maxStatesAllowed)); // Ensure minimum of 2
         } else {
           // Reached max states - switch to random mode
           demoRandomMode = true;
@@ -2035,16 +2060,27 @@ function draw() {
           indicesCopy.splice(randomIndex, 1); // Remove to avoid duplicates
         }
       } else {
-        // RANDOM MODE: After reaching max states, randomly select 1 to max 4 states
-        const allStateIndices = Array.from({length: totalStates}, (_, i) => i); // 0 to totalStates-1
-        const numStatesToCombine = floor(random(1, maxStatesAllowed + 1)); // Random 1 to max 4
+        // RANDOM MODE: After reaching max states, randomly select 2 to max 4 states (minimum 2)
+        // Exclude 'all_elements' from demo mode selection (manual only via 'a' key)
+        const allElementsIndex = allAppStates.findIndex(state => state.name === 'all_elements');
+        const allStateIndices = Array.from({length: totalStates}, (_, i) => i)
+          .filter(i => allElementsIndex >= 0 ? i !== allElementsIndex : true); // Exclude all_elements
+        const availableStates = allStateIndices.length;
+        const maxSelectable = min(maxStatesAllowed, availableStates);
+        const numStatesToCombine = max(2, floor(random(2, maxSelectable + 1))); // Random 2 to max available (minimum 2)
         
-        // Randomly select states to combine
-        const indicesCopy = [...allStateIndices];
-        for (let i = 0; i < numStatesToCombine && indicesCopy.length > 0; i++) {
-          const randomIndex = floor(random(indicesCopy.length));
-          selectedIndices.push(indicesCopy[randomIndex]);
-          indicesCopy.splice(randomIndex, 1); // Remove to avoid duplicates
+        // Safety check: ensure we have enough states
+        if (availableStates >= 2 && numStatesToCombine <= availableStates) {
+          // Randomly select states to combine
+          const indicesCopy = [...allStateIndices];
+          for (let i = 0; i < numStatesToCombine && indicesCopy.length > 0; i++) {
+            const randomIndex = floor(random(indicesCopy.length));
+            selectedIndices.push(indicesCopy[randomIndex]);
+            indicesCopy.splice(randomIndex, 1); // Remove to avoid duplicates
+          }
+        } else {
+          // Fallback: use first 2 available states if we can't select randomly
+          selectedIndices = allStateIndices.slice(0, min(2, availableStates));
         }
       }
       
@@ -2154,6 +2190,22 @@ function draw() {
       if (showParachutists && parachutists.length === 0) {
         initializeParachutists();
       }
+      if (showHelicopters && (!helicopters || helicopters.length === 0)) {
+        helicopters = [];
+        heliLastX = null;
+        lastHelicopterFrame = -1;
+        helicopters.push({
+          x: width * 0.3,
+          y: height * 0.25,
+          speed: 0.5,
+          moveDirection: 0,
+          turnDistance: 600, // Increased for broader flight trajectory
+          distanceTraveled: 0,
+          hue: 200,
+          scale: 6.0,
+          propPhase: 0
+        });
+      }
       if (showRobots && robots.length === 0) {
         initializeRobots();
       }
@@ -2192,6 +2244,23 @@ function draw() {
   if (peopleOpacity < 0.01 && !showPeople) { people = []; }
   if (parachutistsOpacity < 0.01 && !showParachutists) { parachutists = []; }
   if (helicoptersOpacity < 0.01 && !showHelicopters) { helicopters = []; }
+  // Ensure helicopter is initialized when showHelicopters is true
+  if (showHelicopters && (!helicopters || helicopters.length === 0)) {
+    helicopters = [];
+    heliLastX = null;
+    lastHelicopterFrame = -1;
+    helicopters.push({
+      x: width * 0.3,
+      y: height * 0.25,
+      speed: 0.5,
+      moveDirection: 0,
+      turnDistance: 200,
+      distanceTraveled: 0,
+      hue: 200,
+      scale: 6.0,
+      propPhase: 0
+    });
+  }
   if (dronesOpacity < 0.01 && !showDrones) { drones = []; }
   if (planesOpacity < 0.01 && !showPlanes) { planes = []; }
   if (ambulancesOpacity < 0.01 && !showAmbulances) { ambulances = []; }
@@ -2245,14 +2314,18 @@ function draw() {
   isNight = timeOfDay < 0.25 || timeOfDay > 0.75;
   const isDay = timeOfDay >= 0.25 && timeOfDay <= 0.75;
   
-  // Calculate sun position (arc across sky)
+  // Calculate sun position (arc across sky) - variable X position
   // Sun rises at 0.25 (6am), sets at 0.75 (6pm)
   let sunX, sunY, sunVisible = false;
   if (timeOfDay >= 0.25 && timeOfDay <= 0.75) {
     // Daytime - sun visible
     sunVisible = true;
     const sunProgress = (timeOfDay - 0.25) / 0.5; // 0 to 1 from sunrise to sunset
-    sunX = map(sunProgress, 0, 1, width * 0.1, width * 0.9);
+    // Variable X position - can appear across different parts of the sky
+    const baseX = map(sunProgress, 0, 1, width * 0.1, width * 0.9);
+    // Add some variation based on time for different positions
+    const xVariation = sin(timeOfDay * TWO_PI * 2) * width * 0.2; // Varies X position
+    sunX = constrain(baseX + xVariation, width * 0.05, width * 0.95); // Keep within bounds
     // Sun follows an arc (higher at noon)
     const sunArc = sin(sunProgress * PI);
     sunY = height * 0.15 + sunArc * (height * 0.3);
@@ -2292,11 +2365,14 @@ function draw() {
     pop();
   }
   
-  // Draw moon if night
+  // Draw moon if night - variable X position (not centered)
   if (isNight) {
     push();
     colorMode(HSL);
-    const moonX = width * 0.8;
+    // Moon can appear in different X positions across the sky - not centered
+    // Use time-based variation to change position over time, moving across full width
+    const moonXBase = sin(timeOfDay * TWO_PI * 1.5); // -1 to 1
+    const moonX = map(moonXBase, -1, 1, width * 0.15, width * 0.85); // Map to 15% to 85% of screen width
     const moonY = height * 0.2;
     const moonSize = 35;
     
@@ -2349,7 +2425,9 @@ function draw() {
   
   // fill background overlay for trail effect
   colorMode(RGB);
+  rectMode(CORNER); // Ensure rectMode is CORNER for full-screen overlay
   fill(255, 255, 255, 10 * ambientLight);
+  noStroke();
   rect(0, 0, width, height);
   
   noStroke();
@@ -2432,8 +2510,10 @@ function draw() {
     overallEnergy = 0;
   }
 
-  // Circles positioned in top quarter, centered horizontally
-  const cx = width * 0.5; // Center horizontally
+  // Circles positioned in top quarter, variable X position (not always centered)
+  // Use time-based variation to change X position over time
+  const xVariation = sin(dayTime * TWO_PI * 2) * width * 0.3; // Varies X position based on dayTime
+  const cx = constrain(width * 0.5 + xVariation, width * 0.2, width * 0.8); // Variable X, keep within 20% to 80% of screen
   const cy = height * 0.25; // Top quarter vertically
   const dim = min(width, height);
 
@@ -3395,9 +3475,9 @@ function drawMonorail() {
     // Subtle bounce on beats
     const beatBounce = car.beatBoost > 0.5 ? sin(car.phase * 3) * 2 : 0; // Reduced from 5 to 2
     
-    // Final car position (on track + subtle music reactions)
+    // Final car position (on track + subtle music reactions) - Adjusted for doubled car size
     const carX = trackPos.x;
-    const carY = trackPos.y - 25 + verticalOffset + beatBounce;
+    const carY = trackPos.y - 50 + verticalOffset + beatBounce; // Doubled offset from -25 to -50
     
     // Car color shifts with music and pulses on beats
     const targetHue = (currentHue + i * 30) % 360;
@@ -3421,53 +3501,53 @@ function drawMonorail() {
     // Car body - brightness changes with beats
     fill(car.hue, 60, carBrightness, 0.9);
     stroke(0, 0, 0, 0.8);
-    strokeWeight(2);
+    strokeWeight(4); // Doubled from 2
     
-    // Main car body (rounded rectangle style)
+    // Main car body (rounded rectangle style) - DOUBLED SIZE
     rectMode(CENTER);
-    rect(0, 0, 80, 30);
+    rect(0, 0, 160, 60); // Doubled from 80, 30
     
-    // Car windows
+    // Car windows - DOUBLED SIZE
     fill(car.hue, 40, 70, 0.7);
     noStroke();
     // Front window (relative to direction)
-    rect(-25, -5, 15, 12);
+    rect(-50, -10, 30, 24); // Doubled from -25, -5, 15, 12
     // Side windows
-    for (let w = -10; w <= 10; w += 20) {
-      rect(w, -8, 12, 10);
+    for (let w = -20; w <= 20; w += 40) { // Doubled spacing from -10 to 10, step 20 to 40
+      rect(w, -16, 24, 20); // Doubled from w, -8, 12, 10
     }
     // Back window
-    rect(25, -5, 15, 12);
+    rect(50, -10, 30, 24); // Doubled from 25, -5, 15, 12
     
-    // Window frames
+    // Window frames - DOUBLED SIZE
     stroke(0, 0, 0, 0.6);
-    strokeWeight(1);
+    strokeWeight(2); // Doubled from 1
     noFill();
-    rect(-25, -5, 15, 12);
-    rect(25, -5, 15, 12);
-    for (let w = -10; w <= 10; w += 20) {
-      rect(w, -8, 12, 10);
+    rect(-50, -10, 30, 24); // Doubled from -25, -5, 15, 12
+    rect(50, -10, 30, 24); // Doubled from 25, -5, 15, 12
+    for (let w = -20; w <= 20; w += 40) { // Doubled spacing
+      rect(w, -16, 24, 20); // Doubled from w, -8, 12, 10
     }
     
-    // Car connection to track (bogie)
+    // Car connection to track (bogie) - DOUBLED SIZE
     fill(200, 30, 40, 0.8);
     stroke(0, 0, 0, 0.7);
-    strokeWeight(1.5);
-    rect(0, 15, 60, 8);
+    strokeWeight(3); // Doubled from 1.5
+    rect(0, 30, 120, 16); // Doubled from 0, 15, 60, 8
     
-    // Wheels on track
+    // Wheels on track - DOUBLED SIZE
     fill(50, 20, 30, 0.9);
     noStroke();
-    ellipse(-20, 19, 8, 8);
-    ellipse(0, 19, 8, 8);
-    ellipse(20, 19, 8, 8);
+    ellipse(-40, 38, 16, 16); // Doubled from -20, 19, 8, 8
+    ellipse(0, 38, 16, 16); // Doubled from 0, 19, 8, 8
+    ellipse(40, 38, 16, 16); // Doubled from 20, 19, 8, 8
     
-    // Light on front (always on front relative to direction, pulses with beats)
+    // Light on front (always on front relative to direction, pulses with beats) - DOUBLED SIZE
     const lightIntensity = bassLevel > 0.3 ? bassLevel : car.beatBoost * 0.6;
     if (lightIntensity > 0.2) {
       fill(car.hue, 80, 70, lightIntensity * 0.9);
       noStroke();
-      ellipse(-40, 0, 8 + car.beatBoost * 2, 8 + car.beatBoost * 2);
+      ellipse(-80, 0, 16 + car.beatBoost * 4, 16 + car.beatBoost * 4); // Doubled from -40, 0, 8 + car.beatBoost * 2
     }
     
     pop();
@@ -5977,7 +6057,7 @@ function drawHelicopters() {
   if (heli.moveDirection === undefined) heli.moveDirection = 0; // 0=right, 2=left
   if (heli.speed === undefined) heli.speed = 0.5;
   if (heli.distanceTraveled === undefined) heli.distanceTraveled = 0;
-  if (heli.turnDistance === undefined) heli.turnDistance = 200;
+  if (heli.turnDistance === undefined) heli.turnDistance = 600; // Increased for broader flight trajectory
   
   // Ensure position is valid
   if (heli.x === undefined || !isFinite(heli.x)) {
@@ -6017,23 +6097,23 @@ function drawHelicopters() {
     heli.distanceTraveled += fallbackSpeed;
   }
   
-  // Turn at edges
-  const margin = 50;
+  // Turn at edges - reduced margin for broader scope
+  const margin = 30; // Reduced margin to allow closer to edges
   if (heli.x < margin) {
     heli.x = margin;
     heli.moveDirection = 0; // Turn right
     heli.distanceTraveled = 0;
-    heli.turnDistance = 200;
+    heli.turnDistance = 600; // Increased turn distance for broader trajectory
   } else if (heli.x > width - margin) {
     heli.x = width - margin;
     heli.moveDirection = 2; // Turn left
     heli.distanceTraveled = 0;
-    heli.turnDistance = 200;
+    heli.turnDistance = 600; // Increased turn distance for broader trajectory
   } else if (heli.distanceTraveled >= heli.turnDistance) {
     // Turn around
     heli.moveDirection = heli.moveDirection === 0 ? 2 : 0;
     heli.distanceTraveled = 0;
-    heli.turnDistance = 200;
+    heli.turnDistance = 600; // Increased turn distance for broader trajectory
   }
   
   // Detect and prevent jumps (only for large unexpected jumps, not normal movement)
@@ -6645,10 +6725,10 @@ function drawDrones() {
   }
   
   // Turn at edges or when reaching turn distance
-  const margin = 80;
+  const margin = 50; // Reduced margin to allow closer to edges
   const centerX = width * 0.5;
   const centerY = height * 0.5;
-  const maxRadius = 200; // Maximum distance from center
+  const maxRadius = min(width, height) * 0.4; // Maximum distance from center - increased scope (40% of screen dimension)
   
   // Check if too far from center or reached turn distance
   const distFromCenter = dist(drone.x, drone.y, centerX, centerY);
@@ -6667,12 +6747,12 @@ function drawDrones() {
       drone.moveDirection = 3; // Up
     }
     drone.distanceTraveled = 0;
-    drone.turnDistance = 150;
+    drone.turnDistance = 300; // Increased turn distance for wider flight scope
   } else if (drone.distanceTraveled >= drone.turnDistance) {
     // Turn 90 degrees clockwise
     drone.moveDirection = (drone.moveDirection + 1) % 4;
     drone.distanceTraveled = 0;
-    drone.turnDistance = 150;
+    drone.turnDistance = 300; // Increased turn distance for wider flight scope
   }
   
   // Detect and prevent jumps (only for large unexpected jumps, not normal movement)

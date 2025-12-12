@@ -1,7 +1,7 @@
-# monument: Concentric Hues
+# CASA DETROIT 2026
 ![Screenshot 2024-04-06 at 10 50 00 PM](https://github.com/marlonbarrios/concentrichues/assets/90220317/5ade7a0d-4cd4-4ddb-9717-db88f5546b07)
 
-Concentric Hues is an interactive audio-visual experience inspired by the vibrant energy of German techno music and its intangible cultural heritage status. The project captures the essence of techno through dynamic sound visualization, creating a mesmerizing display of colors and shapes that react in real-time to the music.
+CASA DETROIT 2026 is an interactive audio-visual experience inspired by the vibrant energy of German techno music and its intangible cultural heritage status. The project captures the essence of techno through dynamic sound visualization, creating a mesmerizing display of colors and shapes that react in real-time to the music.
 
 This project is a creative exploration combining concept, programming, and music by Marlon Barrios Solano, with inspiration from Matt DesLauriers' work on generative art and music visualization.
 
@@ -14,7 +14,7 @@ This project is a creative exploration combining concept, programming, and music
 
 ## How to Use
 
-1. Visit the live app: [Concentric Hues](https://marlonbarrios.github.io/concentrichues/)
+1. Visit the live app: [CASA DETROIT 2026](https://marlonbarrios.github.io/concentrichues/)
 2. Click anywhere on the screen to start the visualization and music.
 3. Enjoy the evolving patterns of colors and shapes synchronized with the pulse of German techno.
 
@@ -29,7 +29,7 @@ Marlon Barrios Solano is an artist and programmer with a passion for merging tec
 
 ## Live App
 
-Play and experience Concentric Hues here: [https://marlonbarrios.github.io/concentrichues/](https://marlonbarrios.github.io/concentrichues/)
+Play and experience CASA DETROIT 2026 here: [https://marlonbarrios.github.io/concentrichues/](https://marlonbarrios.github.io/concentrichues/)
 
 ## Tags
 
