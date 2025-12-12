@@ -13,6 +13,8 @@ let audio;
 let currentAudioFile = null; // No default file - only dropped files
 let currentAudioObjectURL = null; // Track object URL for dropped files (to revoke later)
 let audioSource = null; // Store the audio source node
+let preventAutoPlay = false; // Flag to prevent auto-play when returning to home
+let audioLoadedWaiting = false; // Flag to track if audio is loaded but waiting for spacebar to play
 let smoothedSignals = [];
 let peakSignals = [];
 let bassLevel = 0;
@@ -280,12 +282,23 @@ let targetMaxMonorailCars = 6; // Gradually increase to this many
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  noCursor(); // Hide the cursor
+  // Cursor is now visible for better interaction with UI elements
 
   // Show credits footer on home page
   const footer = document.getElementById('credits-footer');
   if (footer) {
     footer.style.display = 'block';
+  }
+  
+  // Setup home button - initially hidden
+  const homeButton = document.getElementById('home-button');
+  if (homeButton) {
+    homeButton.classList.add('home-button-hidden');
+    homeButton.classList.remove('home-button-visible');
+    // Add click handler to return to home
+    homeButton.addEventListener('click', function() {
+      returnToHome();
+    });
   }
 
   // Optional:
@@ -1033,16 +1046,22 @@ function loadAudioFile(filename) {
   audio.addEventListener("canplay", () => {
     console.log('canplay event fired, readyState:', audio.readyState);
     // Don't use once - we might need to reconnect
-    if (audio.paused && audio.readyState >= 2) {
+    if (audio.paused && audio.readyState >= 2 && !preventAutoPlay) {
       console.log('Audio can play, calling connectAndPlay');
       connectAndPlay();
+    } else if (preventAutoPlay) {
+      console.log('Auto-play prevented by flag');
     }
   });
   
   audio.addEventListener("canplaythrough", () => {
     console.log('canplaythrough event fired, readyState:', audio.readyState);
-    console.log('Audio fully loaded, connecting and playing');
-    connectAndPlay();
+    if (!preventAutoPlay) {
+      console.log('Audio fully loaded, connecting and playing');
+      connectAndPlay();
+    } else {
+      console.log('Auto-play prevented by flag');
+    }
   }, { once: true });
   
   audio.addEventListener('play', () => {
@@ -1077,9 +1096,11 @@ function loadAudioFile(filename) {
     if (audio) {
       console.log('Audio paused?', audio.paused);
       console.log('Audio readyState:', audio.readyState);
-      if (audio.paused && audio.readyState >= 2) {
+      if (audio.paused && audio.readyState >= 2 && !preventAutoPlay) {
         console.log('Fallback: attempting to connect and play');
         connectAndPlay();
+      } else if (preventAutoPlay) {
+        console.log('Fallback: Auto-play prevented by flag');
       }
     }
   }, 3000);
@@ -1281,21 +1302,147 @@ function mousePressed() {
   }
 }
 
+// Function to return to home state (called by home button or spacebar)
+function returnToHome() {
+  console.log('Returning to home from demo mode');
+  demoMode = false;
+  
+  // Show credits footer when returning to home
+  const footer = document.getElementById('credits-footer');
+  if (footer) {
+    footer.style.display = 'block';
+  }
+  
+  // Hide home button when returning to home
+  const homeButton = document.getElementById('home-button');
+  if (homeButton) {
+    homeButton.classList.add('home-button-hidden');
+    homeButton.classList.remove('home-button-visible');
+  }
+  
+  // Apply home state (geometries_only - first state in allAppStates)
+  const homeState = allAppStates[0]; // 'geometries_only'
+  showCars = homeState.cars;
+  showPeople = homeState.people;
+  showParachutists = homeState.parachutists;
+  showHelicopters = homeState.helicopters;
+  showTracks = homeState.tracks;
+  showTrainCars = homeState.trainCars;
+  showBuildingsStatic = homeState.buildingsStatic;
+  showRenaissance = homeState.renaissance;
+  showBuildingsMoving = homeState.buildingsMoving;
+  showDrones = homeState.drones;
+  showPlanes = homeState.planes;
+  showAmbulances = homeState.ambulances;
+  showRockets = homeState.rockets;
+  showRobots = homeState.robots;
+  showLasers = homeState.lasers;
+  showSmoke = homeState.smoke;
+  showCentralCircles = true; // Home state shows central circles (geometries)
+  
+  // Fade out all elements except central circles
+  carsFadeTarget = 0.0;
+  peopleFadeTarget = 0.0;
+  parachutistsFadeTarget = 0.0;
+  helicoptersFadeTarget = 0.0;
+  tracksFadeTarget = 0.0;
+  trainCarsFadeTarget = 0.0;
+  buildingsStaticFadeTarget = 0.0;
+  renaissanceFadeTarget = 0.0;
+  buildingsMovingFadeTarget = 0.0;
+  dronesFadeTarget = 0.0;
+  planesFadeTarget = 0.0;
+  ambulancesFadeTarget = 0.0;
+  robotsFadeTarget = 0.0;
+  lasersFadeTarget = 0.0;
+  smokeFadeTarget = 0.0;
+  centralCirclesFadeTarget = 1.0; // Ensure central circles are visible at home
+  
+  // Reset background to home state hue
+  window.selectedBackgroundHue = homeState.backgroundHue;
+  
+  // Reset demo state variables completely
+  globalStateIndex = 0;
+  globalAccumulatedStates = 1;
+  demoComplexity = 2;
+  demoRandomMode = false;
+  globalLastStateChangeTime = 0; // Reset timing
+  demoStateStartTime = 0; // Reset demo state timing
+  demoStateDuration = 0; // Reset duration
+  lastGlobalBeatTime = 0; // Reset beat timing
+  
+  // Stop music completely (not pause) and reset when returning to home
+  preventAutoPlay = true; // Set flag to prevent auto-play event listeners
+  audioLoadedWaiting = false; // Reset waiting flag
+  
+  // Fully stop and disconnect audio source first
+  if (audioSource) {
+    try {
+      audioSource.stop();
+      audioSource.disconnect();
+      audioSource = null;
+      console.log('Audio source stopped and disconnected');
+    } catch(e) {
+      console.error('Error stopping audio source:', e);
+    }
+  }
+  
+  // Stop audio completely - remove element entirely
+  if (audio) {
+    try {
+      // Stop playback
+      audio.pause();
+      audio.currentTime = 0;
+      
+      // Remove audio element from DOM completely
+      if (audio.parentNode) {
+        audio.parentNode.removeChild(audio);
+      }
+      
+      // Clear audio reference
+      audio = null;
+      currentAudioFile = null;
+      
+      console.log('Music stopped completely - audio element removed');
+    } catch(e) {
+      console.error('Error stopping audio:', e);
+      // Fallback: stop and clear
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        audio = null;
+      }
+    }
+  }
+  
+  console.log('Returned to HOME state - demoMode:', demoMode, 'showCentralCircles:', showCentralCircles);
+}
+
 function keyPressed() {
-  // Spacebar toggles: if at home, starts demo mode; if in demo, returns to home
-  // - When at HOME (demoMode = false): Press spacebar → Starts demo mode and loads audio
-  // - When in DEMO (demoMode = true): Press spacebar → Stops music, returns to HOME, waits
+  // Spacebar behavior:
+  // - When at HOME (demoMode = false): Press spacebar → Starts demo mode and plays audio immediately
+  // - When in DEMO (demoMode = true): Press spacebar → Stops music, returns to HOME
   if (key === ' ' || keyCode === 32) {
     console.log('Spacebar pressed, demoMode:', demoMode);
+    
     if (!demoMode) {
       // ACTIVATE demo mode - start from home
-      console.log('Starting demo mode from home');
+      console.log('Starting demo mode from home - loading and playing audio immediately');
       demoMode = true;
+      preventAutoPlay = false; // Allow auto-play - play immediately
+      audioLoadedWaiting = false; // Reset waiting flag
       
       // Hide credits footer when starting demo
       const footer = document.getElementById('credits-footer');
       if (footer) {
         footer.style.display = 'none';
+      }
+      
+      // Show home button when starting demo
+      const homeButton = document.getElementById('home-button');
+      if (homeButton) {
+        homeButton.classList.remove('home-button-hidden');
+        homeButton.classList.add('home-button-visible');
       }
       
       // Reset demo state when entering demo mode - start with minimum 2 states
@@ -1409,12 +1556,12 @@ function keyPressed() {
         try {
           audio.currentTime = 0; // Reset to beginning
           // Resume audio context if suspended
-          if (audioContext.state === 'suspended') {
+          if (audioContext && audioContext.state === 'suspended') {
             audioContext.resume().catch(e => {
               console.error('Error resuming context:', e);
             });
           }
-          // Play audio
+          // Play audio immediately
           audio.play().catch(e => {
             console.error('Error playing audio:', e);
           });
@@ -1425,7 +1572,7 @@ function keyPressed() {
           currentAudioFile = 'casa_detroit_2025.mp3';
         }
       } else {
-        // Load and play casa_detroit_2025.mp3
+        // Load and play casa_detroit_2025.mp3 immediately
         try {
           loadAudioFile('casa_detroit_2025.mp3');
           currentAudioFile = 'casa_detroit_2025.mp3';
@@ -1436,74 +1583,8 @@ function keyPressed() {
       }
     } else {
       // DEACTIVATE demo mode - return to HOME state (geometries_only)
-      // This happens when spacebar is pressed while in demo mode
-      console.log('Returning to home from demo mode');
-      demoMode = false;
-      
-      // Show credits footer when returning to home
-      const footer = document.getElementById('credits-footer');
-      if (footer) {
-        footer.style.display = 'block';
-      }
-      
-      // Apply home state (geometries_only - first state in allAppStates)
-      const homeState = allAppStates[0]; // 'geometries_only'
-      showCars = homeState.cars;
-      showPeople = homeState.people;
-      showParachutists = homeState.parachutists;
-      showHelicopters = homeState.helicopters;
-      showTracks = homeState.tracks;
-      showTrainCars = homeState.trainCars;
-      showBuildingsStatic = homeState.buildingsStatic;
-      showRenaissance = homeState.renaissance;
-      showBuildingsMoving = homeState.buildingsMoving;
-      showDrones = homeState.drones;
-      showPlanes = homeState.planes;
-      showAmbulances = homeState.ambulances;
-      showRockets = homeState.rockets;
-      showRobots = homeState.robots;
-      showLasers = homeState.lasers;
-      showSmoke = homeState.smoke;
-      showCentralCircles = true; // Home state shows central circles (geometries)
-      
-      // Fade out all elements except central circles
-      carsFadeTarget = 0.0;
-      peopleFadeTarget = 0.0;
-      parachutistsFadeTarget = 0.0;
-      helicoptersFadeTarget = 0.0;
-      tracksFadeTarget = 0.0;
-      trainCarsFadeTarget = 0.0;
-      buildingsStaticFadeTarget = 0.0;
-      renaissanceFadeTarget = 0.0;
-      buildingsMovingFadeTarget = 0.0;
-      dronesFadeTarget = 0.0;
-      planesFadeTarget = 0.0;
-      ambulancesFadeTarget = 0.0;
-      robotsFadeTarget = 0.0;
-      lasersFadeTarget = 0.0;
-      smokeFadeTarget = 0.0;
-      centralCirclesFadeTarget = 1.0; // Ensure central circles are visible at home
-      
-      // Reset background to home state hue
-      window.selectedBackgroundHue = homeState.backgroundHue;
-      
-      // Reset demo state variables completely
-      globalStateIndex = 0;
-      globalAccumulatedStates = 1;
-      demoComplexity = 2;
-      demoRandomMode = false;
-      globalLastStateChangeTime = 0; // Reset timing
-      demoStateStartTime = 0; // Reset demo state timing
-      demoStateDuration = 0; // Reset duration
-      lastGlobalBeatTime = 0; // Reset beat timing
-      
-      // Stop music completely and reset to beginning when returning to home
-      if (audio) {
-        audio.pause(); // Stop the music
-        audio.currentTime = 0; // Reset to beginning so it's ready to play again
-      }
-      
-      console.log('Returned to HOME state - demoMode:', demoMode, 'showCentralCircles:', showCentralCircles);
+      // This happens when spacebar is pressed while audio is playing
+      returnToHome();
     }
     return false; // Prevent default spacebar behavior (scrolling)
   }
@@ -2123,8 +2204,7 @@ function draw() {
   let deltaTime = (currentTime - lastFrameTime) / 1000; // Convert to seconds
   lastFrameTime = currentTime;
   
-  // Hide cursor every frame
-  noCursor();
+  // Cursor is now visible for better interaction with UI elements
   
   // MANUAL MODE: App starts in manual mode - only central circles visible
   // State machine only runs when demoMode is active
