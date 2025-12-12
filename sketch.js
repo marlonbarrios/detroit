@@ -1282,65 +1282,212 @@ function mousePressed() {
 }
 
 function keyPressed() {
-  // Spacebar always returns to HOME state (geometries_only)
+  // Spacebar toggles: if at home, starts demo mode; if in demo, returns to home
   if (key === ' ' || keyCode === 32) {
-    // Deactivate demo mode
-    demoMode = false;
-    
-    // Show credits footer when returning to home
-    const footer = document.getElementById('credits-footer');
-    if (footer) {
-      footer.style.display = 'block';
-    }
-    
-    // Apply home state (geometries_only - first state in allAppStates)
-    const homeState = allAppStates[0]; // 'geometries_only'
-    showCars = homeState.cars;
-    showPeople = homeState.people;
-    showParachutists = homeState.parachutists;
-    showHelicopters = homeState.helicopters;
-    showTracks = homeState.tracks;
-    showTrainCars = homeState.trainCars;
-    showBuildingsStatic = homeState.buildingsStatic;
-    showRenaissance = homeState.renaissance;
-    showBuildingsMoving = homeState.buildingsMoving;
-    showDrones = homeState.drones;
-    showPlanes = homeState.planes;
-    showAmbulances = homeState.ambulances;
-    showRockets = homeState.rockets;
-    showRobots = homeState.robots;
-    showLasers = homeState.lasers;
-    showSmoke = homeState.smoke;
-    
-    // Fade out all elements
-    carsFadeTarget = 0.0;
-    peopleFadeTarget = 0.0;
-    parachutistsFadeTarget = 0.0;
-    helicoptersFadeTarget = 0.0;
-    tracksFadeTarget = 0.0;
-    trainCarsFadeTarget = 0.0;
-    buildingsStaticFadeTarget = 0.0;
-    renaissanceFadeTarget = 0.0;
-    buildingsMovingFadeTarget = 0.0;
-    dronesFadeTarget = 0.0;
-    planesFadeTarget = 0.0;
-    ambulancesFadeTarget = 0.0;
-    robotsFadeTarget = 0.0;
-    lasersFadeTarget = 0.0;
-    smokeFadeTarget = 0.0;
-    
-    // Reset background to home state hue
-    window.selectedBackgroundHue = homeState.backgroundHue;
-    
-    // Reset demo state variables
-    globalStateIndex = 0;
-    globalAccumulatedStates = 1;
-    demoComplexity = 2;
-    demoRandomMode = false;
-    
-    // Pause audio when returning to home
-    if (audio && !audio.paused) {
-      audio.pause();
+    if (!demoMode) {
+      // ACTIVATE demo mode - start from home
+      demoMode = true;
+      
+      // Hide credits footer when starting demo
+      const footer = document.getElementById('credits-footer');
+      if (footer) {
+        footer.style.display = 'none';
+      }
+      
+      // Reset demo state when entering demo mode - start with minimum 2 states
+      demoComplexity = 2; // Start with minimum 2 states
+      demoRandomMode = false; // Start in progressive mode
+      globalLastStateChangeTime = millis();
+      lastGlobalBeatTime = millis();
+      demoStateStartTime = millis(); // Initialize state timing
+      demoStateDuration = random(5000, 12000); // Random duration between 5-12 seconds
+      demoStateDuration = constrain(demoStateDuration, 5000, 12000); // Ensure duration is within bounds
+      // Apply first state immediately (1 state - start with first non-geometries state)
+      const firstState = allAppStates[1]; // 'cars' - first element state
+      showCars = firstState.cars;
+      showPeople = firstState.people;
+      showParachutists = firstState.parachutists;
+      showHelicopters = firstState.helicopters;
+      showTracks = firstState.tracks;
+      showTrainCars = firstState.trainCars;
+      showBuildingsStatic = firstState.buildingsStatic;
+      showRenaissance = firstState.renaissance;
+      showBuildingsMoving = firstState.buildingsMoving;
+      showDrones = firstState.drones;
+      showPlanes = firstState.planes;
+      showAmbulances = firstState.ambulances;
+      showRockets = firstState.rockets;
+      showRobots = firstState.robots;
+      showLasers = firstState.lasers;
+      showSmoke = firstState.smoke;
+      carsFadeTarget = showCars ? 1.0 : 0.0;
+      peopleFadeTarget = showPeople ? 1.0 : 0.0;
+      parachutistsFadeTarget = showParachutists ? 1.0 : 0.0;
+      helicoptersFadeTarget = showHelicopters ? 1.0 : 0.0;
+      tracksFadeTarget = showTracks ? 1.0 : 0.0;
+      trainCarsFadeTarget = showTrainCars ? 1.0 : 0.0;
+      buildingsStaticFadeTarget = showBuildingsStatic ? 1.0 : 0.0;
+      renaissanceFadeTarget = showRenaissance ? 1.0 : 0.0;
+      buildingsMovingFadeTarget = showBuildingsMoving ? 1.0 : 0.0;
+      dronesFadeTarget = showDrones ? 1.0 : 0.0;
+      planesFadeTarget = showPlanes ? 1.0 : 0.0;
+      ambulancesFadeTarget = showAmbulances ? 1.0 : 0.0;
+      robotsFadeTarget = showRobots ? 1.0 : 0.0;
+      lasersFadeTarget = showLasers ? 1.0 : 0.0;
+      smokeFadeTarget = showSmoke ? 1.0 : 0.0;
+      window.selectedBackgroundHue = firstState.backgroundHue;
+      
+      // Initialize elements if needed (with error handling)
+      try {
+        if (showCars && vintageCars.length === 0) {
+          initializeVintageCars();
+        }
+        if (showPeople && people.length === 0) {
+          initializePeople();
+        }
+        if (showParachutists && parachutists.length === 0) {
+          initializeParachutists();
+        }
+        if (showHelicopters && (!helicopters || helicopters.length === 0)) {
+          helicopters = [];
+          heliLastX = null;
+          lastHelicopterFrame = -1;
+          const canvasWidth = typeof width !== 'undefined' ? width : (typeof windowWidth !== 'undefined' ? windowWidth : 800);
+          const canvasHeight = typeof height !== 'undefined' ? height : (typeof windowHeight !== 'undefined' ? windowHeight : 600);
+          helicopters.push({
+            x: canvasWidth * 0.3,
+            y: canvasHeight * 0.25,
+            speed: 0.5,
+            moveDirection: 0,
+            turnDistance: 600, // Increased for broader flight trajectory
+            distanceTraveled: 0,
+            hue: 200,
+            scale: 6.0,
+            propPhase: 0
+          });
+        }
+        if (showRobots && robots.length === 0) {
+          initializeRobots();
+        }
+        if (showDrones && drones.length === 0) {
+          initializeDrones();
+        }
+        if (showBuildingsStatic && (!buildings || buildings.length === 0)) {
+          initializeBuildings();
+        }
+      } catch(e) {
+        console.error('Error initializing elements:', e);
+      }
+      
+      // Handle audio loading/playing
+      // Ensure audioContext exists before proceeding
+      if (!audioContext) {
+        try {
+          audioContext = new AudioContext();
+        } catch(e) {
+          console.error('Error creating audio context:', e);
+          alert('Error initializing audio. Please try again.');
+          return;
+        }
+      }
+      
+      // Resume audio context if suspended (required for autoplay policies)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().catch(e => {
+          console.error('Error resuming audio context:', e);
+        });
+      }
+      
+      const isCasaPlaying = audio && (currentAudioFile === 'casa_detroit_2025.mp3' || (audio.src && audio.src.includes('casa_detroit_2025.mp3')));
+      
+      if (isCasaPlaying && audio) {
+        // If casa_detroit_2025.mp3 is already loaded, restart from beginning
+        try {
+          audio.currentTime = 0; // Restart from beginning
+          if (audio.paused) {
+            audioContext.resume().then(() => {
+              audio.play().catch(e => {
+                console.error('Error playing audio:', e);
+              });
+            }).catch(e => {
+              console.error('Error resuming context:', e);
+            });
+          }
+        } catch(e) {
+          console.error('Error with existing audio:', e);
+          // Fall through to load new file
+          loadAudioFile('casa_detroit_2025.mp3');
+          currentAudioFile = 'casa_detroit_2025.mp3';
+        }
+      } else {
+        // Load and play casa_detroit_2025.mp3
+        try {
+          loadAudioFile('casa_detroit_2025.mp3');
+          currentAudioFile = 'casa_detroit_2025.mp3';
+        } catch(e) {
+          console.error('Error loading audio file:', e);
+          alert('Error loading audio file. Please try again.');
+        }
+      }
+    } else {
+      // DEACTIVATE demo mode - return to HOME state (geometries_only)
+      demoMode = false;
+      
+      // Show credits footer when returning to home
+      const footer = document.getElementById('credits-footer');
+      if (footer) {
+        footer.style.display = 'block';
+      }
+      
+      // Apply home state (geometries_only - first state in allAppStates)
+      const homeState = allAppStates[0]; // 'geometries_only'
+      showCars = homeState.cars;
+      showPeople = homeState.people;
+      showParachutists = homeState.parachutists;
+      showHelicopters = homeState.helicopters;
+      showTracks = homeState.tracks;
+      showTrainCars = homeState.trainCars;
+      showBuildingsStatic = homeState.buildingsStatic;
+      showRenaissance = homeState.renaissance;
+      showBuildingsMoving = homeState.buildingsMoving;
+      showDrones = homeState.drones;
+      showPlanes = homeState.planes;
+      showAmbulances = homeState.ambulances;
+      showRockets = homeState.rockets;
+      showRobots = homeState.robots;
+      showLasers = homeState.lasers;
+      showSmoke = homeState.smoke;
+      
+      // Fade out all elements
+      carsFadeTarget = 0.0;
+      peopleFadeTarget = 0.0;
+      parachutistsFadeTarget = 0.0;
+      helicoptersFadeTarget = 0.0;
+      tracksFadeTarget = 0.0;
+      trainCarsFadeTarget = 0.0;
+      buildingsStaticFadeTarget = 0.0;
+      renaissanceFadeTarget = 0.0;
+      buildingsMovingFadeTarget = 0.0;
+      dronesFadeTarget = 0.0;
+      planesFadeTarget = 0.0;
+      ambulancesFadeTarget = 0.0;
+      robotsFadeTarget = 0.0;
+      lasersFadeTarget = 0.0;
+      smokeFadeTarget = 0.0;
+      
+      // Reset background to home state hue
+      window.selectedBackgroundHue = homeState.backgroundHue;
+      
+      // Reset demo state variables
+      globalStateIndex = 0;
+      globalAccumulatedStates = 1;
+      demoComplexity = 2;
+      demoRandomMode = false;
+      
+      // Pause audio when returning to home
+      if (audio && !audio.paused) {
+        audio.pause();
+      }
     }
   }
   
@@ -2646,10 +2793,13 @@ function draw() {
     // Show instructions
     textSize(28);
     fill(255, 255, 255, 200);
-    text("Press SPACEBAR to start", width / 2, height / 2 - dim * 0.25);
+    text("Press SPACEBAR to start demo", width / 2, height / 2 - dim * 0.25);
     textSize(20);
     fill(255, 255, 255, 180);
     text("or drop an audio file here", width / 2, height / 2 - dim * 0.18);
+    textSize(16);
+    fill(255, 255, 255, 150);
+    text("SPACEBAR: Toggle demo | D: Demo mode | Click: Play audio", width / 2, height / 2 - dim * 0.12);
     
     // Keyboard controls instructions
     textSize(18);
