@@ -1237,8 +1237,25 @@ function drop(event) {
 }
 
 function mousePressed() {
-  // If at home (not in demo mode), start demo mode on click
-  if (!demoMode) {
+  // Allow clicks on links and interactive elements outside the canvas
+  // Check if click is on a link or button element
+  const clickedElement = document.elementFromPoint(mouseX, mouseY);
+  if (clickedElement) {
+    // Check if clicked element is a link or inside a link
+    const linkElement = clickedElement.closest('a');
+    const buttonElement = clickedElement.closest('button');
+    if (linkElement || buttonElement || clickedElement.tagName === 'A' || clickedElement.tagName === 'BUTTON') {
+      // Allow the click to propagate to the link/button - don't prevent default
+      return;
+    }
+  }
+  
+  // Click reactivity disabled for canvas - no action on canvas mouse click
+  // But don't prevent default to allow links outside canvas to work
+  return;
+  
+  // DISABLED: If at home (not in demo mode), start demo mode on click
+  if (false && !demoMode) {
     // Simulate spacebar press to start demo mode
     key = ' ';
     keyCode = 32;
@@ -1246,9 +1263,9 @@ function mousePressed() {
     return;
   }
   
-  // Toggle play/pause if audio is loaded, otherwise do nothing
+  // DISABLED: Toggle play/pause if audio is loaded, otherwise do nothing
   // Audio only starts when a file is dropped
-  if (audio && audioContext) {
+  if (false && audio && audioContext) {
     console.log('Mouse clicked - toggling audio');
     console.log('Audio paused?', audio.paused);
     console.log('Audio readyState:', audio.readyState);
@@ -2444,12 +2461,12 @@ function drawHomeDescription() {
   for (let i = -2; i <= 2; i++) {
     for (let j = -2; j <= 2; j++) {
       if (i !== 0 || j !== 0) {
-        text("Press SPACEBAR or CLICK anywhere to begin", width / 2 + i, yPos + j);
+        text("Press SPACEBAR to begin", width / 2 + i, yPos + j);
       }
     }
   }
   fill(255);
-  text("Press SPACEBAR or CLICK anywhere to begin", width / 2, yPos);
+  text("Press SPACEBAR to begin", width / 2, yPos);
   
   pop();
 }
@@ -3342,7 +3359,7 @@ function draw() {
     text("or drop an audio file here", width / 2, height / 2 - dim * 0.18);
     textSize(16);
     fill(255, 255, 255, 150);
-    text("SPACEBAR: Toggle demo | D: Demo mode | Click: Play audio", width / 2, height / 2 - dim * 0.12);
+    text("SPACEBAR: Toggle demo | D: Demo mode", width / 2, height / 2 - dim * 0.12);
     
     // Keyboard controls instructions
     textSize(18);
@@ -3362,7 +3379,7 @@ function draw() {
       fill(255, 200, 100, 200);
       text("Last file: " + currentAudioFile, width / 2, yOffset);
       yOffset += 30;
-      text("Click to try playing", width / 2, yOffset);
+      text("Press SPACEBAR to play", width / 2, yOffset);
     }
   } else if (audio) {
     // Show current file name and status when audio exists
@@ -3372,7 +3389,7 @@ function draw() {
     textSize(14);
     let statusText = "File: " + (currentAudioFile || 'Unknown');
     if (audio.paused) {
-      statusText += " (PAUSED - Click to play)";
+      statusText += " (PAUSED - Press SPACEBAR to play)";
     } else {
       statusText += " (PLAYING)";
     }

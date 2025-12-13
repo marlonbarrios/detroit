@@ -160,3 +160,5 @@ Play and experience CASA DETROIT 2026 here: [https://marlonbarrios.github.io/det
 - #digitalunity
 
 Feel free to explore the source code, and for any inquiries or collaborations, contact Marlon Barrios Solano directly.
+
+**Repository:** [https://github.com/marlonbarrios/detroit](https://github.com/marlonbarrios/detroit)
