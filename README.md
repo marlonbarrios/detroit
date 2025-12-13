@@ -4,6 +4,27 @@ CASA DETROIT 2026 is an immersive, interactive audio-visual experience inspired 
 
 This project is a creative exploration combining concept, programming, and music by Marlon Barrios Solano, with inspiration from Matt DesLauriers' work on generative art and music visualization.
 
+## Gallery
+
+<div align="center">
+  <img src="1.png" alt="CASA DETROIT 2026 Screenshot 1" width="45%" style="margin: 10px;">
+  <img src="2.png" alt="CASA DETROIT 2026 Screenshot 2" width="45%" style="margin: 10px;">
+</div>
+
+<div align="center">
+  <img src="4.png" alt="CASA DETROIT 2026 Screenshot 4" width="45%" style="margin: 10px;">
+  <img src="5.png" alt="CASA DETROIT 2026 Screenshot 5" width="45%" style="margin: 10px;">
+</div>
+
+<div align="center">
+  <img src="6.png" alt="CASA DETROIT 2026 Screenshot 6" width="45%" style="margin: 10px;">
+  <img src="7.png" alt="CASA DETROIT 2026 Screenshot 7" width="45%" style="margin: 10px;">
+</div>
+
+<div align="center">
+  <img src="8.png" alt="CASA DETROIT 2026 Screenshot 8" width="45%" style="margin: 10px;">
+</div>
+
 ## Project Description
 
 CASA DETROIT 2026 is a generative art application that transforms audio into a living, breathing digital cityscape. Drawing inspiration from Detroit's post-industrial landscape and the speculative visions of Afrofuturism, the project imagines a future where technology, architecture, and human experience converge in dynamic harmony.
