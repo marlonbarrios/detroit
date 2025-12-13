@@ -21,7 +21,7 @@ let bassLevel = 0;
 let midLevel = 0;
 let trebleLevel = 0;
 let overallEnergy = 0;
-// More granular frequency bands for differentiated reactivity
+// More granular frequency bands for differentiated reactivity  
 let subBassLevel = 0;      // 20-60 Hz (deep sub-bass, kick drums)
 let lowBassLevel = 0;      // 60-120 Hz (bass guitar, bass synth)
 let midBassLevel = 0;      // 120-250 Hz (low-mid bass)
@@ -74,6 +74,8 @@ let showRobots = false;           // r
 let showLasers = false;           // t
 let showSmoke = false;            // y
 let showExplosions = false;       // (part of y)
+let showICECars = false;          // i - ICE surveillance vehicles
+let showBiplane = false;          // g - Biplane with banner
 
 // GLOBAL STATE MACHINE - Cycles through all app states
 let globalStateIndex = 0; // Current state index
@@ -81,7 +83,7 @@ let globalAccumulatedStates = 1; // Number of states to cycle through (starts at
 let globalLastStateChangeTime = 0; // Track last state change
 let globalStateChangeInterval = 10000; // Change states every 10 seconds max
 let demoMode = false; // Demo mode flag - when true, uses random/combined states
-let demoComplexity = 2; // Demo complexity level (starts at 2 minimum, progressively accumulates)
+let demoComplexity = 2; // Demo complexity level (starts at 2, progressively accumulates to 6)
 let demoRandomMode = false; // When true, demo has reached all states and now randomizes
 let lastGlobalBeatTime = 0; // Track last beat for demo mode
 let demoStateStartTime = 0; // Track when current demo state started
@@ -94,7 +96,7 @@ const allAppStates = [
     cars: false, people: false, parachutists: false, helicopters: false,
     tracks: false, trainCars: false, buildingsStatic: false, renaissance: false,
     buildingsMoving: false, drones: false, planes: false, ambulances: false,
-    rockets: false, robots: false, lasers: false, smoke: false,
+    rockets: false, robots: false, lasers: false, smoke: false, iceCars: false, biplane: false,
     backgroundHue: 200
   },
   {
@@ -102,8 +104,26 @@ const allAppStates = [
     cars: true, people: false, parachutists: false, helicopters: false,
     tracks: false, trainCars: false, buildingsStatic: false, renaissance: false,
     buildingsMoving: false, drones: false, planes: false, ambulances: false,
-    rockets: false, robots: false, lasers: false, smoke: false,
+    rockets: false, robots: false, lasers: false, smoke: false, iceCars: false, biplane: false,
     backgroundHue: 240
+  },
+  {
+    name: 'ice_cars',
+    cars: false, people: false, parachutists: false, helicopters: false,
+    tracks: false, trainCars: false, buildingsStatic: false, renaissance: false,
+    buildingsMoving: false, drones: false, planes: false, ambulances: false,
+    rockets: false, robots: false, lasers: false, smoke: false, iceCars: true,
+    biplane: false,
+    backgroundHue: 0
+  },
+  {
+    name: 'biplane',
+    cars: false, people: false, parachutists: false, helicopters: false,
+    tracks: false, trainCars: false, buildingsStatic: false, renaissance: false,
+    buildingsMoving: false, drones: false, planes: false, ambulances: false,
+    rockets: false, robots: false, lasers: false, smoke: false, iceCars: false,
+    biplane: true,
+    backgroundHue: 180
   },
   {
     name: 'people',
@@ -194,19 +214,11 @@ const allAppStates = [
     backgroundHue: 150
   },
   {
-    name: 'rockets',
-    cars: false, people: false, parachutists: false, helicopters: false,
-    tracks: false, trainCars: false, buildingsStatic: false, renaissance: false,
-    buildingsMoving: false, drones: false, planes: false, ambulances: false,
-    rockets: true, robots: false, lasers: false, smoke: false,
-    backgroundHue: 0
-  },
-  {
     name: 'all_elements',
     cars: true, people: true, parachutists: true, helicopters: true,
     tracks: true, trainCars: true, buildingsStatic: true, renaissance: true,
     buildingsMoving: true, drones: true, planes: true, ambulances: true,
-    rockets: true, robots: true, lasers: true, smoke: true,
+    rockets: false, robots: true, lasers: false, smoke: true, iceCars: true, biplane: true,
     backgroundHue: 200
   },
   {
@@ -214,7 +226,7 @@ const allAppStates = [
     cars: false, people: false, parachutists: false, helicopters: false,
     tracks: false, trainCars: false, buildingsStatic: false, renaissance: false,
     buildingsMoving: false, drones: false, planes: false, ambulances: false,
-    rockets: false, robots: false, lasers: false, smoke: false,
+    rockets: false, robots: false, lasers: false, smoke: false, iceCars: false, biplane: false,
     centralCircles: true,
     backgroundHue: 200
   }
@@ -253,9 +265,15 @@ let smokeOpacity = 0.0;
 let smokeFadeTarget = 0.0;
 let explosionsOpacity = 0.0;
 let explosionsFadeTarget = 0.0;
+let biplaneOpacity = 0.0;
+let biplaneFadeTarget = 0.0;
+let biplane = null; // Single biplane with banner
+let iceCarsOpacity = 0.0;
+let iceCarsFadeTarget = 0.0;
 
 const fadeSpeed = 0.05; // Speed of fade transition for all elements
 let vintageCars = [];
+let iceCars = []; // Surveillance ICE vehicles
 let carExplosions = []; // Explosion effects for cars
 let renaissanceCenter = null;
 let people = []; // Regular people (no parachutes)
@@ -550,12 +568,14 @@ function initializeRobots() {
     while (!validPosition && attempts < 100) {
       // Random x positions across screen (with margins)
       xPos = random(width * 0.15, width * 0.85);
-      // Random y positions within 10 pixels of bottom edge
+      // Position robots at ground level (same as cars)
       // Robot extends from y=-52.5 (head top) to y=35 (pedestal bottom) in local coords
       // With max scale of 3.0, bottom extends 35*3.0 = 105px below robot.y
-      // To keep whole robot visible: robot.y + 105 <= height - 10, so robot.y <= height - 115
+      // Ground level is around height * 0.85 (where cars are)
+      const groundLevel = height * 0.85;
       const maxRobotBottomOffset = 35 * 3.0; // Maximum extension below robot center (max scale)
-      yPos = random(height - maxRobotBottomOffset - 20, height - maxRobotBottomOffset - 10); // Within 10 pixels of bottom, whole body visible
+      // Position robot so its bottom (pedestal) is at ground level
+      yPos = groundLevel - maxRobotBottomOffset;
       
       // Check if this position is far enough from all existing positions
       validPosition = true;
@@ -650,7 +670,10 @@ function initializeDrones() {
       propPhase: 0,
       laserCooldown: 0,
       lifetime: 0,
-      maxLifetime: Infinity
+      maxLifetime: Infinity,
+      wifiActive: false, // WiFi communication state
+      wifiPhase: 0, // WiFi animation phase
+      wifiTimer: random(2000, 5000) // Random timer for WiFi activation
     });
   }
 }
@@ -1352,6 +1375,8 @@ function returnToHome() {
   showRobots = homeState.robots;
   showLasers = homeState.lasers;
   showSmoke = homeState.smoke;
+  showICECars = homeState.iceCars;
+  showBiplane = homeState.biplane;
   showCentralCircles = true; // Home state shows central circles (geometries)
   
   // Fade out all elements except central circles
@@ -1370,6 +1395,8 @@ function returnToHome() {
   robotsFadeTarget = 0.0;
   lasersFadeTarget = 0.0;
   smokeFadeTarget = 0.0;
+  iceCarsFadeTarget = 0.0;
+  biplaneFadeTarget = 0.0;
   centralCirclesFadeTarget = 1.0; // Ensure central circles are visible at home
   
   // Reset background to home state hue
@@ -1441,8 +1468,9 @@ function keyPressed() {
     
     if (!demoMode) {
       // ACTIVATE demo mode - start from home
-      console.log('Starting demo mode from home - loading and playing audio immediately');
+      console.log('=== STARTING DEMO MODE ===');
       demoMode = true;
+      console.log('demoMode set to:', demoMode);
       preventAutoPlay = false; // Allow auto-play - play immediately
       audioLoadedWaiting = false; // Reset waiting flag
       
@@ -1459,8 +1487,8 @@ function keyPressed() {
         homeButton.classList.add('home-button-visible');
       }
       
-      // Reset demo state when entering demo mode - start with minimum 2 states
-      demoComplexity = 2; // Start with minimum 2 states
+      // Reset demo state when entering demo mode - start with 2 states
+      demoComplexity = 2; // Start with 2 states
       demoRandomMode = false; // Start in progressive mode
       globalLastStateChangeTime = millis();
       lastGlobalBeatTime = millis();
@@ -1485,6 +1513,7 @@ function keyPressed() {
       showRobots = firstState.robots;
       showLasers = firstState.lasers;
       showSmoke = firstState.smoke;
+      showICECars = firstState.iceCars;
       carsFadeTarget = showCars ? 1.0 : 0.0;
       peopleFadeTarget = showPeople ? 1.0 : 0.0;
       parachutistsFadeTarget = showParachutists ? 1.0 : 0.0;
@@ -1500,12 +1529,17 @@ function keyPressed() {
       robotsFadeTarget = showRobots ? 1.0 : 0.0;
       lasersFadeTarget = showLasers ? 1.0 : 0.0;
       smokeFadeTarget = showSmoke ? 1.0 : 0.0;
+      iceCarsFadeTarget = showICECars ? 1.0 : 0.0;
+      biplaneFadeTarget = showBiplane ? 1.0 : 0.0;
       window.selectedBackgroundHue = firstState.backgroundHue;
       
       // Initialize elements if needed (with error handling)
       try {
         if (showCars && vintageCars.length === 0) {
           initializeVintageCars();
+        }
+        if (showICECars && iceCars.length === 0) {
+          spawnICECar(); // Spawn initial ICE car
         }
         if (showPeople && people.length === 0) {
           initializePeople();
@@ -1589,14 +1623,30 @@ function keyPressed() {
         }
       } else {
         // Load and play casa_detroit_2025.mp3 immediately
+        console.log('Attempting to load audio file...');
         try {
-          loadAudioFile('casa_detroit_2025.mp3');
-          currentAudioFile = 'casa_detroit_2025.mp3';
+          // Try casa_detroit_2025.mp3 first, fallback to casa.mp3
+          const audioFile = 'casa_detroit_2025.mp3';
+          console.log('Loading audio file:', audioFile);
+          loadAudioFile(audioFile);
+          currentAudioFile = audioFile;
+          console.log('Audio file loading initiated');
         } catch(e) {
           console.error('Error loading audio file:', e);
-          alert('Error loading audio file. Please try again.');
+          // Try fallback file
+          try {
+            console.log('Trying fallback file: casa.mp3');
+            loadAudioFile('casa.mp3');
+            currentAudioFile = 'casa.mp3';
+            console.log('Fallback audio file loading initiated');
+          } catch(e2) {
+            console.error('Error loading fallback file:', e2);
+            console.log('Demo mode started but audio failed to load. Demo will continue without audio.');
+            // Don't block demo mode - let it continue even without audio
+          }
         }
       }
+      console.log('Demo mode setup complete. showCars:', showCars, 'carsFadeTarget:', carsFadeTarget);
     } else {
       // DEACTIVATE demo mode - return to HOME state (geometries_only)
       // This happens when spacebar is pressed while audio is playing
@@ -1885,8 +1935,10 @@ function keyPressed() {
         while (!validPosition && attempts < 100) {
           // Random x positions across screen (with margins)
           xPos = random(width * 0.15, width * 0.85);
-          // Random y positions within 10 pixels of bottom edge (accounting for robot height ~35px)
-          yPos = random(height - 45, height - 10); // Within 10 pixels of bottom edge
+          // Position robots at ground level (same as cars)
+          const groundLevel = height * 0.85;
+          const maxRobotBottomOffset = 35 * 3.0; // Maximum extension below robot center (max scale)
+          yPos = groundLevel - maxRobotBottomOffset; // Robot bottom at ground level
           
           // Check if this position is far enough from all existing positions
           validPosition = true;
@@ -1904,13 +1956,14 @@ function keyPressed() {
         
         // If we couldn't find a non-overlapping position after many attempts, use a grid-based fallback
         if (!validPosition) {
-          // Fallback: use evenly spaced positions within 10 pixels of bottom edge
+          // Fallback: use evenly spaced positions at ground level
           const gridCols = 3;
           const colIndex = i % gridCols;
           xPos = width * (0.2 + colIndex * 0.3);
-          // Position robots within 10 pixels of bottom, ensuring whole body is visible
+          // Position robots at ground level (same as cars)
+          const groundLevel = height * 0.85;
           const maxRobotBottomOffset = 35 * 3.0; // Maximum extension below robot center (max scale)
-          yPos = height - maxRobotBottomOffset - 10 - (i % gridCols) * 3; // Vary slightly but stay near bottom
+          yPos = groundLevel - maxRobotBottomOffset; // Robot bottom at ground level
         }
         
         positions.push({ x: xPos, y: yPos });
@@ -1981,6 +2034,15 @@ function keyPressed() {
       carExplosions = [];
       buildingExplosions = [];
     }
+  } else if (key === 'g' || key === 'G') {
+    // Toggle biplane with banner
+    showBiplane = !showBiplane;
+    biplaneFadeTarget = showBiplane ? 1.0 : 0.0;
+    if (showBiplane && !biplane) {
+      initializeBiplane();
+    } else if (!showBiplane) {
+      biplane = null;
+    }
   } else if (key === 'b' || key === 'B') {
     // Toggle smoke with fade
     showSmoke = !showSmoke;
@@ -2040,11 +2102,16 @@ function keyPressed() {
         showRobots = allElementsState.robots;
         showLasers = allElementsState.lasers;
         showSmoke = allElementsState.smoke;
+        showICECars = allElementsState.iceCars;
+        showBiplane = allElementsState.biplane;
         showCentralCircles = true; // Also turn on central circles
         
         // Initialize elements if needed
         if (showCars && vintageCars.length === 0) {
           initializeVintageCars();
+        }
+        if (showICECars && iceCars.length === 0) {
+          spawnICECar(); // Spawn initial ICE car
         }
         if (showPeople && people.length === 0) {
           initializePeople();
@@ -2076,6 +2143,8 @@ function keyPressed() {
       robotsFadeTarget = showRobots ? 1.0 : 0.0;
       lasersFadeTarget = showLasers ? 1.0 : 0.0;
       smokeFadeTarget = showSmoke ? 1.0 : 0.0;
+      iceCarsFadeTarget = showICECars ? 1.0 : 0.0;
+      biplaneFadeTarget = showBiplane ? 1.0 : 0.0;
       centralCirclesFadeTarget = showCentralCircles ? 1.0 : 0.0;
       
       if (!allOn) {
@@ -2086,8 +2155,8 @@ function keyPressed() {
     // Toggle demo mode
     demoMode = !demoMode;
     if (demoMode) {
-      // Reset demo state when entering demo mode - start with minimum 2 states
-      demoComplexity = 2; // Start with minimum 2 states
+      // Reset demo state when entering demo mode - start with 2 states
+      demoComplexity = 2; // Start with 2 states
       demoRandomMode = false; // Start in progressive mode
       globalLastStateChangeTime = millis();
       lastGlobalBeatTime = millis();
@@ -2112,6 +2181,7 @@ function keyPressed() {
       showRobots = firstState.robots;
       showLasers = firstState.lasers;
       showSmoke = firstState.smoke;
+      showICECars = firstState.iceCars;
       carsFadeTarget = showCars ? 1.0 : 0.0;
       peopleFadeTarget = showPeople ? 1.0 : 0.0;
       parachutistsFadeTarget = showParachutists ? 1.0 : 0.0;
@@ -2127,6 +2197,8 @@ function keyPressed() {
       robotsFadeTarget = showRobots ? 1.0 : 0.0;
       lasersFadeTarget = showLasers ? 1.0 : 0.0;
       smokeFadeTarget = showSmoke ? 1.0 : 0.0;
+      iceCarsFadeTarget = showICECars ? 1.0 : 0.0;
+      biplaneFadeTarget = showBiplane ? 1.0 : 0.0;
       window.selectedBackgroundHue = firstState.backgroundHue;
     } else {
       // Exit demo mode - return to manual mode
@@ -2406,14 +2478,15 @@ function draw() {
     }
     
     const timeSinceStateStart = currentTime - demoStateStartTime;
-    const minDuration = 5000; // Minimum 5 seconds
+    const minDuration = 5000; // Minimum 5 seconds - states MUST last at least 5 seconds
     const maxDuration = 12000; // Maximum 12 seconds
     
     // Ensure demoStateDuration is strictly within bounds (5-12 seconds)
     demoStateDuration = constrain(demoStateDuration, minDuration, maxDuration);
     
-    // Detect beat for demo mode changes (but respect minimum duration)
+    // Detect beat for demo mode changes (but ONLY after minimum duration has passed)
     let beatDetected = false;
+    // States cannot change until minimum duration (5 seconds) has passed
     if (analyserNode && frequencyData && timeSinceStateStart >= minDuration) {
       const currentBass = bassLevel || 0;
       const currentMid = midLevel || 0;
@@ -2433,52 +2506,91 @@ function draw() {
     
     // Check if state should change:
     // States MUST last at least 5 seconds (minDuration) and at most 12 seconds (maxDuration)
+    // States CANNOT change faster than every 5 seconds
     // 1. Minimum duration (5s) has passed AND (beat detected OR target duration exceeded)
     // 2. Maximum duration (12s) has passed (force change regardless of beat)
     const hasReachedMinDuration = timeSinceStateStart >= minDuration;
     const hasReachedMaxDuration = timeSinceStateStart >= maxDuration;
+    // Ensure states last at least 5 seconds - never change faster than minimum duration
     const shouldChange = hasReachedMaxDuration || 
                          (hasReachedMinDuration && (beatDetected || timeSinceStateStart >= demoStateDuration));
+    
+    // Progressive biplane appearance: fade in gradually during state duration
+    // Start appearing after 30% of state duration, fully visible by 50%
+    // This ensures the banner is visible and the plane appears progressively
+    const stateProgress = timeSinceStateStart / demoStateDuration; // 0 to 1
+    const biplaneStartProgress = 0.3; // Start appearing at 30% of state duration
+    const biplaneFullProgress = 0.5; // Fully visible by 50% of state duration
+    let biplaneProgressiveOpacity = 0.0;
+    
+    if (showBiplane && stateProgress >= biplaneStartProgress) {
+      if (stateProgress >= biplaneFullProgress) {
+        biplaneProgressiveOpacity = 1.0; // Fully visible
+      } else {
+        // Fade in progressively from 30% to 50%
+        const fadeProgress = (stateProgress - biplaneStartProgress) / (biplaneFullProgress - biplaneStartProgress);
+        biplaneProgressiveOpacity = fadeProgress; // 0 to 1
+      }
+    }
     
     if (shouldChange) {
       const totalStates = allAppStates.length; // Total number of states (including 'all_elements')
       
       let selectedIndices = [];
       
-      const maxStatesAllowed = 4; // Maximum 4 states including central circles
+      const maxStatesAllowed = 6; // Maximum 6 states in progressive mode
+      const maxRandomStates = 5; // Maximum 5 states in random mode
       
       if (!demoRandomMode) {
-        // PROGRESSIVE MODE: Start with minimum 2 states, progressively accumulate to max 4 states
-        // Increase complexity by 1 each state change until reaching max 4 states
-        // Ensure minimum of 2 states always
+        // PROGRESSIVE MODE: Start with 2 states, progressively accumulate to max 6 states
+        // Increase complexity by 1 each state change until reaching max 6 states
         if (demoComplexity < maxStatesAllowed) {
-          demoComplexity = max(2, min(demoComplexity + 1, maxStatesAllowed)); // Ensure minimum of 2
+          demoComplexity = max(2, min(demoComplexity + 1, maxStatesAllowed)); // Start at 2, go up to 6
         } else {
-          // Reached max states - switch to random mode
+          // Reached max states (6) - switch to random mode
           demoRandomMode = true;
         }
         
-        // In progressive mode, randomly select exactly demoComplexity number of states (max 4)
+        // In progressive mode, randomly select exactly demoComplexity number of states (max 6)
         // Use ALL states (including geometries_only, all_elements, and central_circles) for selection
         const allStateIndices = Array.from({length: totalStates}, (_, i) => i); // 0 to totalStates-1
-        const numStatesToSelect = min(demoComplexity, maxStatesAllowed);
+        const numStatesToSelect = min(demoComplexity, maxStatesAllowed); // 2 to 6
         
         // Randomly select exactly numStatesToSelect states
+        // Don't include 'all_elements' when starting (demoComplexity < 4) to avoid too many elements
+        const allElementsIndex = allAppStates.findIndex(state => state.name === 'all_elements');
         const indicesCopy = [...allStateIndices];
-        for (let i = 0; i < numStatesToSelect && indicesCopy.length > 0; i++) {
+        
+        // Only include all_elements if we have complexity >= 4 (to avoid starting with too many elements)
+        if (allElementsIndex >= 0 && demoComplexity >= 4 && numStatesToSelect >= 1) {
+          selectedIndices.push(allElementsIndex);
+          // Remove it from the copy so we don't select it again
+          const allElementsPos = indicesCopy.indexOf(allElementsIndex);
+          if (allElementsPos >= 0) {
+            indicesCopy.splice(allElementsPos, 1);
+          }
+        } else if (allElementsIndex >= 0) {
+          // Remove all_elements from selection pool when starting
+          const allElementsPos = indicesCopy.indexOf(allElementsIndex);
+          if (allElementsPos >= 0) {
+            indicesCopy.splice(allElementsPos, 1);
+          }
+        }
+        
+        // Fill remaining slots with random states
+        const remainingSlots = numStatesToSelect - selectedIndices.length;
+        for (let i = 0; i < remainingSlots && indicesCopy.length > 0; i++) {
           const randomIndex = floor(random(indicesCopy.length));
           selectedIndices.push(indicesCopy[randomIndex]);
           indicesCopy.splice(randomIndex, 1); // Remove to avoid duplicates
         }
       } else {
-        // RANDOM MODE: After reaching max states, randomly select 2 to max 4 states (minimum 2)
-        // Exclude 'all_elements' from demo mode selection (manual only via 'a' key)
-        const allElementsIndex = allAppStates.findIndex(state => state.name === 'all_elements');
-        const allStateIndices = Array.from({length: totalStates}, (_, i) => i)
-          .filter(i => allElementsIndex >= 0 ? i !== allElementsIndex : true); // Exclude all_elements
+        // RANDOM MODE: After reaching max states (6), randomly select 1 to max 5 states
+        // Include 'all_elements' in demo mode selection
+        const allStateIndices = Array.from({length: totalStates}, (_, i) => i); // Include all states
         const availableStates = allStateIndices.length;
-        const maxSelectable = min(maxStatesAllowed, availableStates);
-        const numStatesToCombine = max(2, floor(random(2, maxSelectable + 1))); // Random 2 to max available (minimum 2)
+        const maxSelectable = min(maxRandomStates, availableStates); // Max 5 states
+        const numStatesToCombine = max(1, floor(random(1, maxSelectable + 1))); // Random 1 to max 5
         
         // Safety check: ensure we have enough states
         if (availableStates >= 2 && numStatesToCombine <= availableStates) {
@@ -2490,8 +2602,8 @@ function draw() {
             indicesCopy.splice(randomIndex, 1); // Remove to avoid duplicates
           }
         } else {
-          // Fallback: use first 2 available states if we can't select randomly
-          selectedIndices = allStateIndices.slice(0, min(2, availableStates));
+          // Fallback: use first available state if we can't select randomly
+          selectedIndices = allStateIndices.slice(0, min(1, availableStates));
         }
       }
       
@@ -2514,6 +2626,8 @@ function draw() {
         robots: false,
         lasers: false,
         smoke: false,
+        iceCars: false,
+        biplane: false,
         centralCircles: false,
         backgroundHue: 200
       };
@@ -2531,13 +2645,53 @@ function draw() {
         combinedState.buildingsStatic = combinedState.buildingsStatic || state.buildingsStatic;
         combinedState.renaissance = combinedState.renaissance || state.renaissance;
         combinedState.buildingsMoving = combinedState.buildingsMoving || state.buildingsMoving;
-        combinedState.drones = combinedState.drones || state.drones;
-        combinedState.planes = combinedState.planes || state.planes;
+        // Drones, helicopters, planes, and biplane are mutually exclusive
+        // Only allow one flying element at a time - prioritize first encountered
+        // Special handling for all_elements state: randomly pick one flying element
+        if (state.name === 'all_elements') {
+          // For all_elements, randomly select one flying element
+          const flyingOptions = [];
+          if (state.drones) flyingOptions.push('drones');
+          if (state.helicopters) flyingOptions.push('helicopters');
+          if (state.planes) flyingOptions.push('planes');
+          if (state.biplane) flyingOptions.push('biplane');
+          
+          if (flyingOptions.length > 0 && !combinedState.drones && !combinedState.helicopters && !combinedState.planes && !combinedState.biplane) {
+            const selected = flyingOptions[Math.floor(random(flyingOptions.length))];
+            combinedState.drones = selected === 'drones';
+            combinedState.helicopters = selected === 'helicopters';
+            combinedState.planes = selected === 'planes';
+            combinedState.biplane = selected === 'biplane';
+          }
+        } else if (state.drones && !combinedState.helicopters && !combinedState.planes && !combinedState.biplane) {
+          combinedState.drones = true;
+          combinedState.helicopters = false;
+          combinedState.planes = false;
+          combinedState.biplane = false;
+        } else if (state.helicopters && !combinedState.drones && !combinedState.planes && !combinedState.biplane) {
+          combinedState.helicopters = true;
+          combinedState.drones = false;
+          combinedState.planes = false;
+          combinedState.biplane = false;
+        } else if (state.planes && !combinedState.drones && !combinedState.helicopters && !combinedState.biplane) {
+          combinedState.planes = true;
+          combinedState.drones = false;
+          combinedState.helicopters = false;
+          combinedState.biplane = false;
+        } else if (state.biplane && !combinedState.drones && !combinedState.helicopters && !combinedState.planes) {
+          combinedState.biplane = true;
+          combinedState.drones = false;
+          combinedState.helicopters = false;
+          combinedState.planes = false;
+        }
+        // If a flying element is already set, don't override it
         combinedState.ambulances = combinedState.ambulances || state.ambulances;
         combinedState.rockets = combinedState.rockets || state.rockets;
         combinedState.robots = combinedState.robots || state.robots;
         combinedState.lasers = combinedState.lasers || state.lasers;
         combinedState.smoke = combinedState.smoke || state.smoke;
+        combinedState.iceCars = combinedState.iceCars || state.iceCars;
+        // Note: biplane is handled in the mutual exclusivity logic above, don't override here
         combinedState.centralCircles = combinedState.centralCircles || (state.centralCircles || false);
         combinedHues.push(state.backgroundHue);
       }
@@ -2548,23 +2702,51 @@ function draw() {
         combinedState.backgroundHue = (hueSum / combinedHues.length) % 360;
       }
       
+      // Ensure mutual exclusivity: only one flying element at a time
+      // Priority: drones > helicopters > planes > biplane
+      if (combinedState.drones) {
+        showDrones = true;
+        showHelicopters = false;
+        showPlanes = false;
+        showBiplane = false;
+      } else if (combinedState.helicopters) {
+        showDrones = false;
+        showHelicopters = true;
+        showPlanes = false;
+        showBiplane = false;
+      } else if (combinedState.planes) {
+        showDrones = false;
+        showHelicopters = false;
+        showPlanes = true;
+        showBiplane = false;
+      } else if (combinedState.biplane) {
+        showDrones = false;
+        showHelicopters = false;
+        showPlanes = false;
+        showBiplane = true;
+      } else {
+        // No flying elements
+        showDrones = false;
+        showHelicopters = false;
+        showPlanes = false;
+        showBiplane = false;
+      }
+      
       // Apply combined state
       showCars = combinedState.cars;
       showPeople = combinedState.people;
       showParachutists = combinedState.parachutists;
-      showHelicopters = combinedState.helicopters;
       showTracks = combinedState.tracks;
       showTrainCars = combinedState.trainCars;
       showBuildingsStatic = combinedState.buildingsStatic;
       showRenaissance = combinedState.renaissance;
       showBuildingsMoving = combinedState.buildingsMoving;
-      showDrones = combinedState.drones;
-      showPlanes = combinedState.planes;
       showAmbulances = combinedState.ambulances;
       showRockets = combinedState.rockets;
       showRobots = combinedState.robots;
       showLasers = combinedState.lasers;
       showSmoke = combinedState.smoke;
+      showICECars = combinedState.iceCars;
       showCentralCircles = combinedState.centralCircles;
       carsFadeTarget = showCars ? 1.0 : 0.0;
       peopleFadeTarget = showPeople ? 1.0 : 0.0;
@@ -2581,6 +2763,23 @@ function draw() {
       robotsFadeTarget = showRobots ? 1.0 : 0.0;
       lasersFadeTarget = showLasers ? 1.0 : 0.0;
       smokeFadeTarget = showSmoke ? 1.0 : 0.0;
+      iceCarsFadeTarget = showICECars ? 1.0 : 0.0;
+      // Progressive biplane appearance: fade in gradually during state duration
+      // Calculate progressive opacity for state change
+      const stateProgressForChange = timeSinceStateStart / demoStateDuration;
+      const biplaneStartProgress = 0.3;
+      const biplaneFullProgress = 0.5;
+      let biplaneProgressiveOpacityForChange = 0.0;
+      
+      if (showBiplane && stateProgressForChange >= biplaneStartProgress) {
+        if (stateProgressForChange >= biplaneFullProgress) {
+          biplaneProgressiveOpacityForChange = 1.0;
+        } else {
+          const fadeProgress = (stateProgressForChange - biplaneStartProgress) / (biplaneFullProgress - biplaneStartProgress);
+          biplaneProgressiveOpacityForChange = fadeProgress;
+        }
+      }
+      biplaneFadeTarget = biplaneProgressiveOpacityForChange;
       centralCirclesFadeTarget = showCentralCircles ? 1.0 : 0.0;
       window.selectedBackgroundHue = combinedState.backgroundHue;
       globalLastStateChangeTime = currentTime;
@@ -2625,6 +2824,12 @@ function draw() {
       if (showDrones && drones.length === 0) {
         initializeDrones();
       }
+      if (showICECars && iceCars.length === 0) {
+        spawnICECar(); // Spawn initial ICE car for demo mode
+      }
+      if (showBiplane && !biplane) {
+        initializeBiplane(); // Initialize biplane for demo mode
+      }
       if (showBuildingsStatic && (!buildings || buildings.length === 0)) {
         initializeBuildings();
       }
@@ -2651,6 +2856,27 @@ function draw() {
   lasersOpacity = lerp(lasersOpacity, lasersFadeTarget, fadeSpeed);
   smokeOpacity = lerp(smokeOpacity, smokeFadeTarget, fadeSpeed);
   explosionsOpacity = lerp(explosionsOpacity, explosionsFadeTarget, fadeSpeed);
+  iceCarsOpacity = lerp(iceCarsOpacity, iceCarsFadeTarget, fadeSpeed);
+  // Update biplane fade target continuously for progressive appearance
+  if (demoMode && showBiplane) {
+    const timeSinceStateStart = millis() - demoStateStartTime;
+    const stateProgress = timeSinceStateStart / demoStateDuration; // 0 to 1
+    const biplaneStartProgress = 0.3; // Start appearing at 30% of state duration
+    const biplaneFullProgress = 0.5; // Fully visible by 50% of state duration
+    
+    if (stateProgress >= biplaneStartProgress) {
+      if (stateProgress >= biplaneFullProgress) {
+        biplaneFadeTarget = 1.0; // Fully visible
+      } else {
+        // Fade in progressively from 30% to 50%
+        const fadeProgress = (stateProgress - biplaneStartProgress) / (biplaneFullProgress - biplaneStartProgress);
+        biplaneFadeTarget = fadeProgress; // 0 to 1
+      }
+    } else {
+      biplaneFadeTarget = 0.0; // Not yet visible
+    }
+  }
+  biplaneOpacity = lerp(biplaneOpacity, biplaneFadeTarget, fadeSpeed);
   
   // Clear arrays when opacity reaches 0 (after fade out)
   if (carsOpacity < 0.01 && !showCars) { vintageCars = []; carExplosions = []; }
@@ -2681,6 +2907,8 @@ function draw() {
   if (ambulancesOpacity < 0.01 && !showAmbulances) { ambulances = []; }
   if (robotsOpacity < 0.01 && !showRobots) { robots = []; }
   if (lasersOpacity < 0.01 && !showLasers) { lasers = []; }
+  if (iceCarsOpacity < 0.01 && !showICECars) { iceCars = []; }
+  if (biplaneOpacity < 0.01 && !showBiplane) { biplane = null; }
   
   // Auto-spawn lasers when showLasers is true (independent of drones)
   if (showLasers) {
@@ -3072,15 +3300,22 @@ function draw() {
   // Apply fade opacity by only drawing when opacity is above threshold
   // Draw robots FIRST so cars and ambulances appear on top of them
   if (robotsOpacity > 0.01) { push(); drawingContext.globalAlpha *= robotsOpacity; drawRobots(); pop(); }
-  if (carsOpacity > 0.01) { push(); drawingContext.globalAlpha *= carsOpacity; drawVintageCars(); pop(); }
+  if (carsOpacity > 0.01) { 
+    push(); 
+    drawingContext.globalAlpha *= carsOpacity; 
+    drawVintageCars(); 
+    drawICECars(); // Draw ICE surveillance vehicles
+    pop(); 
+  }
   if (peopleOpacity > 0.01) { push(); drawingContext.globalAlpha *= peopleOpacity; drawPeople(); pop(); }
   if (parachutistsOpacity > 0.01) { push(); drawingContext.globalAlpha *= parachutistsOpacity; drawParachutists(); pop(); }
   if (helicoptersOpacity > 0.01) { push(); drawingContext.globalAlpha *= helicoptersOpacity; drawHelicopters(); pop(); }
   if (planesOpacity > 0.01) { push(); drawingContext.globalAlpha *= planesOpacity; drawPlanes(); pop(); }
+  if (biplaneOpacity > 0.01) { push(); drawingContext.globalAlpha *= biplaneOpacity; drawBiplane(); pop(); }
   if (ambulancesOpacity > 0.01) { push(); drawingContext.globalAlpha *= ambulancesOpacity; drawAmbulances(); pop(); }
   if (showRockets) drawRockets();
-  // Draw lasers - ALWAYS VISIBLE when showLasers is true (bypass opacity fade for maximum visibility)
-  if (showLasers) {
+  // Draw lasers - Always draw if lasers exist (from drones or showLasers mode)
+  if (lasers && lasers.length > 0) {
     drawLasers();
   }
   if (dronesOpacity > 0.01) { push(); drawingContext.globalAlpha *= dronesOpacity; drawDrones(); pop(); }
@@ -4945,6 +5180,194 @@ function drawVintageCars() {
     textSize(3);
     textAlign(CENTER, CENTER);
     text("DET", 38, 0);
+    
+    pop();
+  }
+  
+  colorMode(HSL);
+}
+
+function spawnICECar() {
+  // ICE surveillance vehicle - white with official look
+  const laneCount = 3;
+  const laneSpacing = 40;
+  const baseRoadY = height * 0.85;
+  
+  const direction = random() > 0.5 ? 1 : -1;
+  const spawnX = random() > 0.5 ? 
+    (direction === 1 ? random(-200, -50) : random(width + 50, width + 200)) :
+    random(0, width);
+  
+  const laneIndex = Math.floor(random(laneCount));
+  const laneY = baseRoadY + (laneIndex * laneSpacing) - (laneCount - 1) * laneSpacing / 2;
+  
+  iceCars.push({
+    x: spawnX,
+    y: laneY,
+    baseY: laneY,
+    lane: laneIndex,
+    direction: direction,
+    speed: random(0.3, 0.5), // Slower, more deliberate movement
+    scale: random(1.8, 2.2) * 1.3,
+    phase: random(0, TWO_PI),
+    wheelRotation: 0,
+    lastBassLevel: 0,
+    opacity: 1,
+    targetOpacity: 1,
+    lifetime: 0,
+    lightPhase: 0 // For flashing lights
+  });
+}
+
+function drawICECars() {
+  if (!iceCars || iceCars.length === 0) return;
+  
+  if (!deltaTime) deltaTime = 0.016;
+  
+  // Spawn ICE cars occasionally
+  if (iceCars.length < 2 && random() < 0.001) { // Rare spawn
+    spawnICECar();
+  }
+  
+  for (let i = iceCars.length - 1; i >= 0; i--) {
+    const car = iceCars[i];
+    
+    if (!car) {
+      iceCars.splice(i, 1);
+      continue;
+    }
+    
+    // Update car position - smooth movement like vintage cars
+    const carBassLevel = analyserNode ? (bassLevel || 0) : 0;
+    const speedMultiplier = analyserNode ? 1 + carBassLevel * 0.2 : 1;
+    // Use same movement calculation as vintage cars for consistency
+    car.x += car.speed * speedMultiplier * car.direction;
+    
+    // Update wheel rotation
+    car.wheelRotation += car.speed * speedMultiplier * 0.1;
+    
+    // Update light phase for flashing lights
+    if (deltaTime) {
+      car.lightPhase += deltaTime * 5;
+    } else {
+      car.lightPhase += 0.016 * 5;
+    }
+    
+    // Loop cars smoothly
+    if (car.direction === 1 && car.x > width + 150) {
+      car.x = -150;
+    } else if (car.direction === -1 && car.x < -150) {
+      car.x = width + 150;
+    }
+    
+    // Vertical bounce
+    car.phase += deltaTime * 0.2;
+    const verticalBounce = sin(car.phase) * 1;
+    car.y = car.baseY - verticalBounce;
+    
+    // Draw ICE surveillance vehicle
+    push();
+    translate(car.x, car.y);
+    scale(car.scale);
+    
+    // Flip car if going left
+    if (car.direction === -1) {
+      scale(-1, 1);
+    }
+    
+    colorMode(HSL);
+    
+    // Car body - white surveillance vehicle
+    fill(0, 0, 95, car.opacity); // White
+    stroke(0, 0, 0, 0.8 * car.opacity);
+    strokeWeight(2);
+    
+    // Main body - more boxy, official look
+    rectMode(CENTER);
+    beginShape();
+    // Top
+    vertex(-30, -10);
+    vertex(30, -10);
+    // Right side
+    vertex(30, 10);
+    // Bottom
+    vertex(-30, 10);
+    endShape(CLOSE);
+    
+    // Roof (slightly raised for surveillance look)
+    fill(0, 0, 90, car.opacity);
+    rect(0, -12, 50, 6);
+    
+    // Light bar on top (flashing)
+    const lightIntensity = sin(car.lightPhase) > 0 ? 1 : 0.3;
+    fill(200, 100, 60, lightIntensity * car.opacity); // Blue lights
+    noStroke();
+    rect(0, -15, 45, 4);
+    
+    // Red lights on light bar
+    fill(0, 100, 60, lightIntensity * car.opacity); // Red lights
+    ellipse(-15, -15, 6, 4);
+    ellipse(15, -15, 6, 4);
+    
+    // Windows
+    fill(200, 30, 40, 0.6 * car.opacity);
+    stroke(0, 0, 0, 0.5 * car.opacity);
+    strokeWeight(1);
+    rect(-10, -8, 12, 8);
+    rect(10, -8, 12, 8);
+    
+    // "ICE" text on side - counter-flip text so it reads correctly when car is flipped
+    push();
+    if (car.direction === -1) {
+      scale(-1, 1); // Counter-flip text to read correctly
+    }
+    fill(0, 0, 0, car.opacity); // Black text
+    noStroke();
+    textSize(8);
+    textAlign(CENTER, CENTER);
+    textStyle(BOLD);
+    text("ICE", 0, 2);
+    
+    // Border around ICE text for visibility
+    stroke(0, 0, 0, car.opacity);
+    strokeWeight(1);
+    noFill();
+    rect(0, 2, 20, 6);
+    pop();
+    
+    // Wheels
+    fill(0, 0, 20, car.opacity);
+    noStroke();
+    
+    // Front wheels
+    push();
+    translate(-18, 12);
+    rotate(car.wheelRotation);
+    ellipse(0, 0, 10, 10);
+    stroke(0, 0, 0, 0.6 * car.opacity);
+    strokeWeight(1);
+    line(-5, 0, 5, 0);
+    line(0, -5, 0, 5);
+    pop();
+    
+    // Rear wheels
+    push();
+    translate(18, 12);
+    rotate(car.wheelRotation);
+    ellipse(0, 0, 10, 10);
+    stroke(0, 0, 0, 0.6 * car.opacity);
+    strokeWeight(1);
+    line(-5, 0, 5, 0);
+    line(0, -5, 0, 5);
+    pop();
+    
+    // Grille
+    stroke(0, 0, 0, 0.7 * car.opacity);
+    strokeWeight(1);
+    noFill();
+    for (let g = -2; g <= 2; g++) {
+      line(-32, g * 1.5, -30, g * 1.5);
+    }
     
     pop();
   }
@@ -7150,7 +7573,10 @@ function drawDrones() {
         opacity: 1,
         rotation: 0,
         propPhase: 0,
-        laserCooldown: 0
+        laserCooldown: 0,
+        wifiActive: false,
+        wifiPhase: 0,
+        wifiTimer: random(2000, 5000)
       });
     }
   }
@@ -7164,6 +7590,9 @@ function drawDrones() {
   for (let droneIdx = 0; droneIdx < drones.length; droneIdx++) {
     const drone = drones[droneIdx];
     if (!drone) continue;
+    
+    // Check if this is the laser drone (first drone)
+    const isLaserDrone = droneIdx === 0;
   
     // Store previous position to detect jumps
     const prevX = drone.x;
@@ -7172,6 +7601,35 @@ function drawDrones() {
     // Update propeller animation
     if (drone.propPhase === undefined) drone.propPhase = 0;
     drone.propPhase += deltaTime * 30;
+    
+    // Initialize WiFi communication properties
+    if (drone.wifiActive === undefined) drone.wifiActive = false;
+    if (drone.wifiPhase === undefined) drone.wifiPhase = 0;
+    if (drone.wifiTimer === undefined) drone.wifiTimer = random(2000, 5000);
+    
+    // Update WiFi timer and toggle WiFi state intermittently
+    drone.wifiTimer -= deltaTime * 1000;
+    if (drone.wifiTimer <= 0) {
+      drone.wifiActive = !drone.wifiActive; // Toggle WiFi on/off
+      if (drone.wifiActive) {
+        drone.wifiTimer = random(1500, 3000); // WiFi active duration
+      } else {
+        drone.wifiTimer = random(3000, 7000); // WiFi inactive duration
+      }
+    }
+    
+    // Update WiFi animation phase when active
+    if (drone.wifiActive) {
+      drone.wifiPhase += deltaTime * 2;
+    }
+    
+    // Initialize laser scanning beam for first drone (similar to helicopter)
+    if (isLaserDrone) {
+      if (drone.laserScanAngle === undefined) drone.laserScanAngle = 0;
+      // Scanning laser beam moves in circles around screen edges
+      drone.laserScanAngle += deltaTime * 0.8; // Circular scanning speed
+      if (drone.laserScanAngle >= TWO_PI) drone.laserScanAngle -= TWO_PI; // Wrap around
+    }
     
     // Initialize movement properties if needed
     if (drone.moveDirection === undefined) drone.moveDirection = 0; // 0=right, 1=down, 2=left, 3=up
@@ -7308,15 +7766,123 @@ function drawDrones() {
       drone.lastY = drone.y;
     }
     
-    // Fire lasers occasionally
-    if (drone.laserCooldown === undefined) drone.laserCooldown = 0;
-    if (drone.laserCooldown <= 0 && analyserNode && (snareHit || bassLevel > 0.5)) {
-      const targetX = random(0, width);
-      const targetY = random(height * 0.3, height * 0.9);
-      createLaser(drone.x, drone.y, targetX, targetY, drone.hue);
-      drone.laserCooldown = random(2000, 4000);
+    // Other drones shoot discrete lasers occasionally when audio is active
+    if (droneIdx !== 0) {
+      if (drone.laserCooldown === undefined) drone.laserCooldown = 0;
+      if (drone.laserCooldown <= 0 && analyserNode && (snareHit || bassLevel > 0.5)) {
+        const targetX = random(0, width);
+        const targetY = random(height * 0.3, height * 0.9);
+        createLaser(drone.x, drone.y, targetX, targetY, drone.hue);
+        drone.laserCooldown = random(2000, 4000);
+      }
+      drone.laserCooldown -= deltaTime * 1000;
     }
-    drone.laserCooldown -= deltaTime * 1000;
+    
+    // Get hue for both drone and WiFi symbol
+    const hue = drone.hue;
+    
+    // Draw scanning laser beam FIRST (behind drone) - circular scanning around screen edges
+    if (isLaserDrone && drone.laserScanAngle !== undefined) {
+      push();
+      
+      // Calculate circular scan angle (0 to TWO_PI)
+      const scanAngle = drone.laserScanAngle;
+      
+      // Calculate intersection point with screen edges
+      // Start from drone position
+      const startX = drone.x;
+      const startY = drone.y;
+      
+      // Calculate direction vector
+      const dirX = cos(scanAngle);
+      const dirY = sin(scanAngle);
+      
+      // Find intersection with screen edges
+      let endX, endY;
+      let t = Infinity;
+      
+      // Check intersection with left edge (x = 0)
+      if (dirX < 0) {
+        const tLeft = -startX / dirX;
+        if (tLeft > 0 && tLeft < t) {
+          t = tLeft;
+          endX = 0;
+          endY = startY + dirY * t;
+        }
+      }
+      
+      // Check intersection with right edge (x = width)
+      if (dirX > 0) {
+        const tRight = (width - startX) / dirX;
+        if (tRight > 0 && tRight < t) {
+          t = tRight;
+          endX = width;
+          endY = startY + dirY * t;
+        }
+      }
+      
+      // Check intersection with top edge (y = 0)
+      if (dirY < 0) {
+        const tTop = -startY / dirY;
+        if (tTop > 0 && tTop < t) {
+          t = tTop;
+          endX = startX + dirX * t;
+          endY = 0;
+        }
+      }
+      
+      // Check intersection with bottom edge (y = height)
+      if (dirY > 0) {
+        const tBottom = (height - startY) / dirY;
+        if (tBottom > 0 && tBottom < t) {
+          t = tBottom;
+          endX = startX + dirX * t;
+          endY = height;
+        }
+      }
+      
+      // Ensure we have valid endpoints
+      if (t === Infinity) {
+        // Fallback: extend to screen corner
+        endX = startX + dirX * width * 2;
+        endY = startY + dirY * height * 2;
+      }
+      
+      // Clamp to screen bounds
+      endX = constrain(endX, 0, width);
+      endY = constrain(endY, 0, height);
+      
+      // Calculate beam width (thinner beam)
+      const beamWidth = 60;
+      const beamLength = dist(startX, startY, endX, endY);
+      
+      // Draw laser beam as a line from drone to edge
+      colorMode(HSL);
+      const laserHue = 0; // Red - threatening color
+      const laserIntensity = analyserNode ? (bassLevel * 0.6 + 0.4) : 0.8;
+      
+      // Calculate perpendicular direction for beam width
+      const perpAngle = scanAngle + PI / 2;
+      const perpX = cos(perpAngle);
+      const perpY = sin(perpAngle);
+      
+      // Outer glow
+      stroke(laserHue, 90, 70, laserIntensity * 0.4);
+      strokeWeight(beamWidth);
+      line(startX, startY, endX, endY);
+      
+      // Main laser beam
+      stroke(laserHue, 100, 85, laserIntensity * 0.7);
+      strokeWeight(beamWidth * 0.6);
+      line(startX, startY, endX, endY);
+      
+      // Bright center beam
+      stroke(laserHue, 100, 95, laserIntensity * 0.9);
+      strokeWeight(beamWidth * 0.3);
+      line(startX, startY, endX, endY);
+      
+      pop();
+    }
     
     // Draw drone - SIMPLE AND CLEAN
     push();
@@ -7329,7 +7895,6 @@ function drawDrones() {
     scale(drone.scale);
     
     colorMode(HSL);
-    const hue = drone.hue;
     const ledIntensity = analyserNode ? (bassLevel * 0.7 + trebleLevel * 0.5) : 0.5;
     
     // Main body
@@ -7395,6 +7960,42 @@ function drawDrones() {
     ellipse(0, -4, 4, 4);
     
     pop();
+    
+    // Draw WiFi symbol when drone is communicating/surveying
+    if (drone.wifiActive) {
+      push();
+      translate(drone.x, drone.y);
+      
+      // Draw WiFi symbol closer to drone
+      const wifiY = -25 * drone.scale; // Closer position above drone
+      const wifiSize = 18 * drone.scale;
+      const wifiOpacity = 0.8 + sin(drone.wifiPhase) * 0.2; // More visible pulsing
+      
+      colorMode(HSL);
+      // Use brighter, more saturated colors
+      const wifiHue = hue;
+      const wifiSat = 100; // Maximum saturation
+      const wifiLight = 85; // Bright color
+      stroke(wifiHue, wifiSat, wifiLight, drone.opacity * wifiOpacity);
+      strokeWeight(12); // Much thicker lines
+      strokeCap(ROUND);
+      noFill();
+      
+      // Draw WiFi symbol (3 curved arcs - semicircles)
+      const arcSpacing = wifiSize / 3;
+      for (let arcIdx = 0; arcIdx < 3; arcIdx++) {
+        const arcRadius = (arcIdx + 1) * arcSpacing;
+        // Draw semicircle arc (from PI to 0, which is top half)
+        arc(0, wifiY, arcRadius * 2, arcRadius * 2, PI, 0);
+      }
+      
+      // Draw center dot - brighter and larger
+      fill(wifiHue, wifiSat, wifiLight, drone.opacity * wifiOpacity);
+      noStroke();
+      ellipse(0, wifiY, 6, 6);
+      
+      pop();
+    }
   } // End of drone loop
   
   colorMode(HSL);
@@ -7410,7 +8011,7 @@ function createLaser(x1, y1, x2, y2, hue) {
     y2: y2,
     hue: hue || random(0, 360),
     lifetime: 0,
-    maxLifetime: 2000, // Lasers last 2 seconds
+    maxLifetime: 3000, // Lasers last 3 seconds for better visibility
     opacity: 1.0
   });
 }
@@ -7454,38 +8055,43 @@ function drawLasers() {
     // Pulsing effect
     const pulse = sin(progress * TWO_PI * 3) * 0.3 + 1.0;
     
-    // Bright colors
+    // Very bright, saturated colors
     const colors = [
-      [255, 50, 50],    // Bright Red
-      [50, 255, 50],    // Bright Green
-      [50, 50, 255],    // Bright Blue
-      [255, 255, 50],   // Bright Yellow
-      [255, 50, 255],   // Bright Magenta
-      [50, 255, 255]    // Bright Cyan
+      [255, 0, 0],      // Pure Red
+      [0, 255, 0],      // Pure Green
+      [0, 0, 255],      // Pure Blue
+      [255, 255, 0],    // Pure Yellow
+      [255, 0, 255],    // Pure Magenta
+      [0, 255, 255]     // Pure Cyan
     ];
     const colorIndex = Math.floor((laser.hue || 0) / 60) % colors.length;
     let [r, g, b] = colors[colorIndex];
     
-    // Brighten colors
-    r = Math.min(255, r + 100);
-    g = Math.min(255, g + 100);
-    b = Math.min(255, b + 100);
+    // Maximum brightness
+    r = Math.min(255, r + 150);
+    g = Math.min(255, g + 150);
+    b = Math.min(255, b + 150);
     
-    // Draw multiple layers for visibility
+    // Draw multiple layers for maximum visibility
+    
+    // Outermost glow - very wide and bright
+    stroke(r, g, b, 180);
+    strokeWeight(50 * pulse);
+    line(laser.x1, laser.y1, laser.x2, laser.y2);
     
     // Outer glow
-    stroke(r, g, b, 200);
-    strokeWeight(30 * pulse);
+    stroke(r, g, b, 220);
+    strokeWeight(40 * pulse);
     line(laser.x1, laser.y1, laser.x2, laser.y2);
     
     // Middle glow
-    stroke(r, g, b, 230);
-    strokeWeight(20 * pulse);
+    stroke(r, g, b, 250);
+    strokeWeight(30 * pulse);
     line(laser.x1, laser.y1, laser.x2, laser.y2);
     
-    // Inner glow
+    // Inner glow - brightest core
     stroke(r, g, b, 255);
-    strokeWeight(12 * pulse);
+    strokeWeight(18 * pulse);
     line(laser.x1, laser.y1, laser.x2, laser.y2);
     
     // Bright core
@@ -7761,18 +8367,203 @@ function drawRockets() {
     // Small inner core - BRIGHT
     fill(fireHue, 100, 90, rocket.opacity * 0.5);
     ellipse(exhaustX - dir * 3 + flameOffset, exhaustY, flameSize * 0.5, flameSize * 0.4);
+  }
+}
+
+// Initialize biplane with banner
+function initializeBiplane() {
+  if (!deltaTime) deltaTime = 0.016;
+  
+  // Calculate starting position so banner is fully visible
+  // Banner position: bannerX = plane.x - ropeLength - 100 = plane.x - 500
+  // For banner to be visible: bannerX should be >= 0 (fully visible)
+  // Start plane far enough right that banner is visible on screen
+  const ropeLength = 400;
+  const bannerSpacing = 100;
+  const bannerOffset = ropeLength + bannerSpacing; // 500px
+  const minPlaneX = bannerOffset + 100; // Ensure banner starts visible with margin
+  const startX = max(width * 0.75, minPlaneX); // Start at 75% of screen width minimum
+  
+  biplane = {
+    x: startX, // Start far enough right so banner is visible (at least width * 0.75)
+    y: height * 0.3, // Fly in upper third of screen
+    speed: 0.002, // Very very slow horizontal speed
+    direction: 1, // Always fly left to right
+    scale: 4.5, // 3x larger (was 1.5)
+    propPhase: 0, // Propeller rotation
+    wingFlap: 0, // Wing animation
+    bannerWave: 0, // Banner waving animation
+    hue: 200, // Blue color
+    bannerText: "my house is your house",
+    bannerLength: 600, // 3x larger (was 200)
+    bannerHeight: 90, // 3x larger (was 30)
+    ropeLength: 400 // Much farther from plane (was 240)
+  };
+}
+
+// Draw biplane with waving banner
+function drawBiplane() {
+  if (!biplane) return;
+  
+  if (!deltaTime) deltaTime = 0.016;
+  
+  // Update biplane position - always fly left to right
+  biplane.x += biplane.speed * biplane.direction * deltaTime * 60;
+  
+  // Loop biplane: when it reaches right edge, reset to right side (so banner is visible)
+  if (biplane.x > width + 200) {
+    const ropeLength = biplane.ropeLength || 400;
+    const bannerOffset = ropeLength + 100;
+    const minPlaneX = bannerOffset + 100;
+    biplane.x = max(width * 0.75, minPlaneX); // Reset to right side so banner is visible when it appears
+  }
+  
+  // Update animations
+  biplane.propPhase += deltaTime * 20; // Fast propeller rotation
+  biplane.wingFlap += deltaTime * 2; // Gentle wing flapping
+  biplane.bannerWave += deltaTime * 3; // Banner waving
+  
+  // Gentle vertical floating
+  biplane.y += sin(biplane.wingFlap * 0.5) * 0.3;
+  
+  // Draw banner first (behind plane)
+  // Banner is pulled behind/to the left of plane (plane flies left to right)
+  // Position banner so it doesn't overlap with plane - much farther away
+  const bannerX = biplane.x - biplane.ropeLength - 100; // Banner is much farther behind plane
+  const bannerY = biplane.y + 15;
+  
+  // Draw banner with waving effect
+  push();
+  translate(bannerX, bannerY);
+  
+  // Wave the banner using sine waves
+  const waveAmount = sin(biplane.bannerWave) * 15; // Wave amplitude
+  const waveFrequency = 0.1; // How many waves
+  
+  colorMode(HSL);
+  
+  // Draw banner as a curved shape that waves
+  fill(0, 0, 95, 1.0); // White banner (opacity handled by globalAlpha)
+  stroke(0, 0, 0, 1.0);
+  strokeWeight(2);
+  
+  beginShape();
+  // Top edge with wave
+  for (let i = 0; i <= biplane.bannerLength; i += 5) {
+    const wave = sin(i * waveFrequency + biplane.bannerWave) * waveAmount;
+    vertex(i - biplane.bannerLength / 2, wave);
+  }
+  // Bottom edge with wave (offset)
+  for (let i = biplane.bannerLength; i >= 0; i -= 5) {
+    const wave = sin(i * waveFrequency + biplane.bannerWave + PI) * waveAmount;
+    vertex(i - biplane.bannerLength / 2, biplane.bannerHeight + wave);
+  }
+  endShape(CLOSE);
+  
+  // Draw text on banner - each character waves along with the banner
+  fill(0, 0, 0, 1.0); // Black text (opacity handled by globalAlpha)
+  noStroke();
+  textSize(36); // 3x larger (was 12)
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  
+  // Draw text character by character along the wave path
+  const textChars = biplane.bannerText.split('');
+  const charSpacing = biplane.bannerLength / (textChars.length + 1); // Space characters evenly
+  
+  for (let i = 0; i < textChars.length; i++) {
+    // Calculate position along banner (from left to right)
+    const charX = (i + 1) * charSpacing - biplane.bannerLength / 2;
     
-    // Exhaust nozzle (side view - single nozzle) - BLACK
-    fill(0, 0, 15, rocket.opacity); // Very dark black
-    stroke(0, 0, 0, rocket.opacity);
-    strokeWeight(4);
-    rectMode(CENTER);
-    rect(exhaustX, exhaustY, 6, 10); // Single nozzle at back (side view)
+    // Calculate wave offset at this position (matching banner wave)
+    const wave = sin(charX * waveFrequency + biplane.bannerWave) * waveAmount;
     
+    // Calculate wave angle for character rotation (derivative of wave function)
+    const waveAngle = cos(charX * waveFrequency + biplane.bannerWave) * waveFrequency * waveAmount;
+    
+    // Position and rotate character to follow the wave
+    push();
+    translate(charX, biplane.bannerHeight / 2 + wave);
+    rotate(waveAngle); // Rotate character to follow wave slope
+    text(textChars[i], 0, 0);
     pop();
   }
   
+  pop();
+  
+  // Draw ropes connecting plane to banner (banner pulled behind plane)
+  push();
+  stroke(0, 0, 0, 1.0); // Opacity handled by globalAlpha
+  strokeWeight(2);
+  // Ropes connect from plane's back/left side to banner's front/right side
+  line(biplane.x - 15, biplane.y + 10, 
+       bannerX + biplane.bannerLength / 2, bannerY);
+  line(biplane.x - 15, biplane.y + 20, 
+       bannerX + biplane.bannerLength / 2, bannerY + biplane.bannerHeight);
+  pop();
+  
+  // Draw biplane
+  push();
+  translate(biplane.x, biplane.y);
+  scale(biplane.scale);
+  
+  // Flip if going left
+  if (biplane.direction === -1) {
+    scale(-1, 1);
+  }
+  
   colorMode(HSL);
+  const hue = biplane.hue;
+  
+  // Lower wing (larger)
+  fill(hue, 70, 60, 1.0); // Opacity handled by globalAlpha
+  stroke(0, 0, 0, 1.0);
+  strokeWeight(2);
+  ellipse(0, 8, 40, 8);
+  
+  // Upper wing (smaller, with flap animation)
+  const wingFlapOffset = sin(biplane.wingFlap) * 2;
+  push();
+  translate(0, -8 + wingFlapOffset);
+  fill(hue, 70, 60, 1.0); // Opacity handled by globalAlpha
+  ellipse(0, 0, 35, 7);
+  pop();
+  
+  // Wing struts (connecting upper and lower wings)
+  stroke(hue, 50, 40, 1.0); // Opacity handled by globalAlpha
+  strokeWeight(2);
+  line(-12, -8 + wingFlapOffset, -10, 8);
+  line(12, -8 + wingFlapOffset, 10, 8);
+  
+  // Fuselage (body)
+  fill(hue, 60, 50, 1.0); // Opacity handled by globalAlpha
+  stroke(0, 0, 0, 1.0);
+  strokeWeight(2);
+  ellipse(0, 0, 25, 8);
+  
+  // Tail
+  fill(hue, 70, 60, 1.0); // Opacity handled by globalAlpha
+  triangle(-12, 0, -18, -5, -18, 5);
+  
+  // Propeller (spinning)
+  push();
+  translate(12, 0);
+  rotate(biplane.propPhase);
+  stroke(hue, 50, 40, 1.0); // Opacity handled by globalAlpha
+  strokeWeight(3);
+  line(0, 0, 8, 0);
+  line(0, 0, -8, 0);
+  line(0, 0, 0, 8);
+  line(0, 0, 0, -8);
+  pop();
+  
+  // Cockpit
+  fill(200, 50, 70, 1.0); // Opacity handled by globalAlpha
+  stroke(0, 0, 0, 1.0);
+  strokeWeight(1);
+  ellipse(2, -2, 8, 6);
+  
+  pop();
 }
 
 // Draw a basic polygon, handles triangles, squares, pentagons, etc
