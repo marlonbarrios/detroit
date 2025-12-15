@@ -1479,16 +1479,85 @@ function returnToHome() {
 
 function keyPressed() {
   // Spacebar behavior:
-  // - When at HOME (demoMode = false): Press spacebar → Starts demo mode and plays audio immediately
-  // - When in DEMO (demoMode = true): Press spacebar → Stops music, returns to HOME
+  // - Always restarts music from the beginning
+  // - Starts demo mode if not already active
+  // - Home is accessed via the HOME button in top right corner
   if (key === ' ' || keyCode === 32) {
     console.log('Spacebar pressed, demoMode:', demoMode);
     
+    // ALWAYS restart audio from the beginning
+    // Ensure audioContext exists before proceeding
+    if (!audioContext) {
+      try {
+        audioContext = new AudioContext();
+      } catch(e) {
+        console.error('Error creating audio context:', e);
+        alert('Error initializing audio. Please try again.');
+        return false;
+      }
+    }
+    
+    // Resume audio context if suspended (required for autoplay policies)
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(e => {
+        console.error('Error resuming audio context:', e);
+      });
+    }
+    
+    // Always restart audio from beginning
+    const isCasaPlaying = audio && (currentAudioFile === 'casa_detroit_2025.mp3' || (audio.src && audio.src.includes('casa_detroit_2025.mp3')));
+    
+    if (isCasaPlaying && audio) {
+      // If casa_detroit_2025.mp3 is already loaded, restart from beginning and play
+      try {
+        audio.currentTime = 0; // Reset to beginning
+        // Resume audio context if suspended
+        if (audioContext && audioContext.state === 'suspended') {
+          audioContext.resume().catch(e => {
+            console.error('Error resuming context:', e);
+          });
+        }
+        // Play audio immediately
+        audio.play().catch(e => {
+          console.error('Error playing audio:', e);
+        });
+      } catch(e) {
+        console.error('Error with existing audio:', e);
+        // Fall through to load new file
+        loadAudioFile('casa_detroit_2025.mp3');
+        currentAudioFile = 'casa_detroit_2025.mp3';
+      }
+    } else {
+      // Load and play casa_detroit_2025.mp3 immediately
+      console.log('Attempting to load audio file...');
+      try {
+        // Try casa_detroit_2025.mp3 first, fallback to casa.mp3
+        const audioFile = 'casa_detroit_2025.mp3';
+        console.log('Loading audio file:', audioFile);
+        loadAudioFile(audioFile);
+        currentAudioFile = audioFile;
+        console.log('Audio file loading initiated');
+      } catch(e) {
+        console.error('Error loading audio file:', e);
+        // Try fallback file
+        try {
+          console.log('Trying fallback file: casa.mp3');
+          loadAudioFile('casa.mp3');
+          currentAudioFile = 'casa.mp3';
+          console.log('Fallback audio file loading initiated');
+        } catch(e2) {
+          console.error('Error loading fallback file:', e2);
+          console.log('Audio failed to load.');
+        }
+      }
+    }
+    
+    // Only start demo mode if not already in demo mode
     if (!demoMode) {
-      // ACTIVATE demo mode - start from home
+      // ACTIVATE demo mode
+      hasBeenInDemoMode = true; // Mark that demo mode has been activated
       console.log('=== STARTING DEMO MODE ===');
       demoMode = true;
-      hasBeenInDemoMode = true; // Mark that demo mode has been activated
       console.log('demoMode set to:', demoMode);
       preventAutoPlay = false; // Allow auto-play - play immediately
       audioLoadedWaiting = false; // Reset waiting flag
@@ -1599,85 +1668,17 @@ function keyPressed() {
         console.error('Error initializing elements:', e);
       }
       
-      // Handle audio loading/playing
-      // Ensure audioContext exists before proceeding
-      if (!audioContext) {
-        try {
-          audioContext = new AudioContext();
-        } catch(e) {
-          console.error('Error creating audio context:', e);
-          alert('Error initializing audio. Please try again.');
-          return;
-        }
-      }
-      
-      // Resume audio context if suspended (required for autoplay policies)
-      if (audioContext.state === 'suspended') {
-        audioContext.resume().catch(e => {
-          console.error('Error resuming audio context:', e);
-        });
-      }
-      
-      const isCasaPlaying = audio && (currentAudioFile === 'casa_detroit_2025.mp3' || (audio.src && audio.src.includes('casa_detroit_2025.mp3')));
-      
-      if (isCasaPlaying && audio) {
-        // If casa_detroit_2025.mp3 is already loaded, restart from beginning and play
-        try {
-          audio.currentTime = 0; // Reset to beginning
-          // Resume audio context if suspended
-          if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume().catch(e => {
-              console.error('Error resuming context:', e);
-            });
-          }
-          // Play audio immediately
-          audio.play().catch(e => {
-            console.error('Error playing audio:', e);
-          });
-        } catch(e) {
-          console.error('Error with existing audio:', e);
-          // Fall through to load new file
-          loadAudioFile('casa_detroit_2025.mp3');
-          currentAudioFile = 'casa_detroit_2025.mp3';
-        }
-      } else {
-        // Load and play casa_detroit_2025.mp3 immediately
-        console.log('Attempting to load audio file...');
-        try {
-          // Try casa_detroit_2025.mp3 first, fallback to casa.mp3
-          const audioFile = 'casa_detroit_2025.mp3';
-          console.log('Loading audio file:', audioFile);
-          loadAudioFile(audioFile);
-          currentAudioFile = audioFile;
-          console.log('Audio file loading initiated');
-        } catch(e) {
-          console.error('Error loading audio file:', e);
-          // Try fallback file
-          try {
-            console.log('Trying fallback file: casa.mp3');
-            loadAudioFile('casa.mp3');
-            currentAudioFile = 'casa.mp3';
-            console.log('Fallback audio file loading initiated');
-          } catch(e2) {
-            console.error('Error loading fallback file:', e2);
-            console.log('Demo mode started but audio failed to load. Demo will continue without audio.');
-            // Don't block demo mode - let it continue even without audio
-          }
-        }
-      }
       console.log('Demo mode setup complete. showCars:', showCars, 'carsFadeTarget:', carsFadeTarget);
-    } else {
-      // DEACTIVATE demo mode - return to HOME state (geometries_only)
-      // This happens when spacebar is pressed while audio is playing
-      returnToHome();
     }
     return false; // Prevent default spacebar behavior (scrolling)
   }
   
   // Keyboard controls mapped to 1234567890 and qwerty
+  // These work in both demo mode OFF (manual control) and demo mode ON
   // 1: Cars, 2: People, 3: Parachutists, 4: Helicopters, 5: Tracks, 6: Train cars
   // 7: Buildings static, 8: Renaissance, 9: Buildings moving, 0: Drones
   // q: Planes, w: Ambulances, e: Rockets, r: Robots, t: Lasers, y: Smoke/Explosions
+  // When demo mode is OFF, these keys allow full manual control of elements
   
   if (key === '1') {
     // Toggle cars with fade
@@ -2079,10 +2080,25 @@ function keyPressed() {
     // Toggle all states on/off
     const allElementsState = allAppStates.find(state => state.name === 'all_elements');
     if (allElementsState) {
-      // Check if all states are currently on (check a few key states)
-      const allOn = showCars && showPeople && showRobots && showDrones && showPlanes && 
-                    showAmbulances && showHelicopters && showParachutists && showLasers && 
-                    showSmoke && showCentralCircles;
+      // Check if all states are currently on (check all states from all_elements)
+      const allOn = showCars === allElementsState.cars &&
+                    showPeople === allElementsState.people &&
+                    showParachutists === allElementsState.parachutists &&
+                    showHelicopters === allElementsState.helicopters &&
+                    showTracks === allElementsState.tracks &&
+                    showTrainCars === allElementsState.trainCars &&
+                    showBuildingsStatic === allElementsState.buildingsStatic &&
+                    showRenaissance === allElementsState.renaissance &&
+                    showBuildingsMoving === allElementsState.buildingsMoving &&
+                    showDrones === allElementsState.drones &&
+                    showPlanes === allElementsState.planes &&
+                    showAmbulances === allElementsState.ambulances &&
+                    showRobots === allElementsState.robots &&
+                    showLasers === allElementsState.lasers &&
+                    showSmoke === allElementsState.smoke &&
+                    showICECars === allElementsState.iceCars &&
+                    showBiplane === allElementsState.biplane &&
+                    showCentralCircles === true; // Central circles should be on
       
       if (allOn) {
         // Turn all states off
@@ -2102,6 +2118,8 @@ function keyPressed() {
         showRobots = false;
         showLasers = false;
         showSmoke = false;
+        showICECars = false;
+        showBiplane = false;
         showCentralCircles = false;
       } else {
         // Turn all states on
@@ -2609,24 +2627,34 @@ function draw() {
         }
       } else {
         // RANDOM MODE: After reaching max states (6), randomly select 1 to max 5 states
-        // Include 'all_elements' in demo mode selection
+        // NEVER include 'all_elements' in demo mode selection
+        const allElementsIndex = allAppStates.findIndex(state => state.name === 'all_elements');
         const allStateIndices = Array.from({length: totalStates}, (_, i) => i); // Include all states
-        const availableStates = allStateIndices.length;
+        // Remove all_elements from selection pool
+        const indicesCopy = [...allStateIndices];
+        if (allElementsIndex >= 0) {
+          const allElementsPos = indicesCopy.indexOf(allElementsIndex);
+          if (allElementsPos >= 0) {
+            indicesCopy.splice(allElementsPos, 1);
+          }
+        }
+        const availableStates = indicesCopy.length;
         const maxSelectable = min(maxRandomStates, availableStates); // Max 5 states
         const numStatesToCombine = max(1, floor(random(1, maxSelectable + 1))); // Random 1 to max 5
         
         // Safety check: ensure we have enough states
         if (availableStates >= 2 && numStatesToCombine <= availableStates) {
-          // Randomly select states to combine
-          const indicesCopy = [...allStateIndices];
-          for (let i = 0; i < numStatesToCombine && indicesCopy.length > 0; i++) {
-            const randomIndex = floor(random(indicesCopy.length));
-            selectedIndices.push(indicesCopy[randomIndex]);
-            indicesCopy.splice(randomIndex, 1); // Remove to avoid duplicates
+          // Randomly select states to combine (excluding all_elements)
+          selectedIndices = [];
+          const statesToSelectFrom = [...indicesCopy]; // Copy of indices without all_elements
+          for (let i = 0; i < numStatesToCombine && statesToSelectFrom.length > 0; i++) {
+            const randomIndex = floor(random(statesToSelectFrom.length));
+            selectedIndices.push(statesToSelectFrom[randomIndex]);
+            statesToSelectFrom.splice(randomIndex, 1); // Remove to avoid duplicates
           }
         } else {
-          // Fallback: use first available state if we can't select randomly
-          selectedIndices = allStateIndices.slice(0, min(1, availableStates));
+          // Fallback: use first available state if we can't select randomly (excluding all_elements)
+          selectedIndices = indicesCopy.slice(0, min(1, availableStates));
         }
       }
       
