@@ -83,6 +83,7 @@ let globalAccumulatedStates = 1; // Number of states to cycle through (starts at
 let globalLastStateChangeTime = 0; // Track last state change
 let globalStateChangeInterval = 10000; // Change states every 10 seconds max
 let demoMode = false; // Demo mode flag - when true, uses random/combined states
+let hasBeenInDemoMode = false; // Track if demo mode has ever been activated
 let demoComplexity = 2; // Demo complexity level (starts at 2, progressively accumulates to 6)
 let demoRandomMode = false; // When true, demo has reached all states and now randomizes
 let lastGlobalBeatTime = 0; // Track last beat for demo mode
@@ -1487,6 +1488,7 @@ function keyPressed() {
       // ACTIVATE demo mode - start from home
       console.log('=== STARTING DEMO MODE ===');
       demoMode = true;
+      hasBeenInDemoMode = true; // Mark that demo mode has been activated
       console.log('demoMode set to:', demoMode);
       preventAutoPlay = false; // Allow auto-play - play immediately
       audioLoadedWaiting = false; // Reset waiting flag
@@ -2172,6 +2174,7 @@ function keyPressed() {
     // Toggle demo mode
     demoMode = !demoMode;
     if (demoMode) {
+      hasBeenInDemoMode = true; // Mark that demo mode has been activated
       // Reset demo state when entering demo mode - start with 2 states
       demoComplexity = 2; // Start with 2 states
       demoRandomMode = false; // Start in progressive mode
@@ -2220,10 +2223,13 @@ function keyPressed() {
     } else {
       // Exit demo mode - return to manual mode
       // Reset timing but keep current element states (user can manually control)
+      // Don't show home description - just disable demo mode
       globalLastStateChangeTime = 0; // Reset so demo can restart fresh if re-enabled
       demoStateStartTime = 0;
       demoStateDuration = 0;
       demoRandomMode = false;
+      // Keep current visual state - don't reset to home
+      // User can continue manually controlling elements
     }
   }
   
@@ -3420,7 +3426,8 @@ function draw() {
   }
   
   // Draw home page description LAST (on top) when not in demo mode
-  if (!demoMode) {
+  // Only show home description if we're at initial state (never been in demo mode)
+  if (!demoMode && !hasBeenInDemoMode) {
     drawHomeDescription();
   }
 }
