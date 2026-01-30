@@ -1,43 +1,47 @@
-# CASA DETROIT 2026
+# My house is Your House 2026
 
-CASA DETROIT 2026 is an immersive, interactive audio-visual experience inspired by the origins of techno music in Detroit and its profound cultural legacy. The project pays homage to the birthplace of techno while exploring speculative futures through an Afrofuturist lens, creating a mesmerizing post-industrial cityscape that reacts in real-time to the music.
+My house is Your House 2026 is an immersive, interactive audio-visual experience inspired by the origins of techno music in Detroit and its profound cultural legacy. The project pays homage to the birthplace of techno while exploring speculative futures through an Afrofuturist lens, creating a mesmerizing post-industrial cityscape that reacts in real-time to the music.
 
 This project is a creative exploration combining concept, programming, and music by Marlon Barrios Solano, with inspiration from Matt DesLauriers' work on generative art and music visualization.
 
 ## Gallery
 
 <div align="center">
-  <img src="1.png" alt="CASA DETROIT 2026 Screenshot 1" width="45%" style="margin: 10px;">
-  <img src="2.png" alt="CASA DETROIT 2026 Screenshot 2" width="45%" style="margin: 10px;">
+  <img src="1.png" alt="My house is Your House 2026 Screenshot 1" width="45%" style="margin: 10px;">
+  <img src="2.png" alt="My house is Your House 2026 Screenshot 2" width="45%" style="margin: 10px;">
 </div>
 
 <div align="center">
-  <img src="4.png" alt="CASA DETROIT 2026 Screenshot 4" width="45%" style="margin: 10px;">
-  <img src="5.png" alt="CASA DETROIT 2026 Screenshot 5" width="45%" style="margin: 10px;">
+  <img src="4.png" alt="My house is Your House 2026 Screenshot 4" width="45%" style="margin: 10px;">
+  <img src="5.png" alt="My house is Your House 2026 Screenshot 5" width="45%" style="margin: 10px;">
 </div>
 
 <div align="center">
-  <img src="6.png" alt="CASA DETROIT 2026 Screenshot 6" width="45%" style="margin: 10px;">
-  <img src="7.png" alt="CASA DETROIT 2026 Screenshot 7" width="45%" style="margin: 10px;">
+  <img src="6.png" alt="My house is Your House 2026 Screenshot 6" width="45%" style="margin: 10px;">
+  <img src="7.png" alt="My house is Your House 2026 Screenshot 7" width="45%" style="margin: 10px;">
 </div>
 
 <div align="center">
-  <img src="8.png" alt="CASA DETROIT 2026 Screenshot 8" width="45%" style="margin: 10px;">
+  <img src="8.png" alt="My house is Your House 2026 Screenshot 8" width="45%" style="margin: 10px;">
 </div>
 
 ## Project Description
 
-CASA DETROIT 2026 is a generative art application that transforms audio into a living, breathing digital cityscape. Drawing inspiration from Detroit's post-industrial landscape and the speculative visions of Afrofuturism, the project imagines a future where technology, architecture, and human experience converge in dynamic harmony.
+My house is Your House 2026 is a generative art application that transforms audio into a living, breathing digital cityscape. Drawing inspiration from Detroit's post-industrial landscape and the speculative visions of Afrofuturism, the project imagines a future where technology, architecture, and human experience converge in dynamic harmony.
 
 The experience features a complex state machine system that cycles through various visual configurations, each highlighting different elements of a futuristic Detroit-inspired environment. The visuals respond dynamically to audio frequencies, creating a synchronized dance between sound and image that echoes the rhythmic innovations of techno's pioneers.
 
 The application includes multiple interactive elements such as vintage cars, pedestrians, parachutists, flying drones, helicopters, planes, robots, ambulances, monorail systems, and architectural structures. Each element reacts to different frequency bands of the audio, creating a multi-layered visual narrative that evolves with the music—reflecting both the post-industrial present and speculative futures of urban transformation.
 
+### Color Palette
+
+The color palette used throughout the installation is inspired by the designs of Afrofuturism Week 2026, organized by the Center for Arts, Migration and Entrepreneurship at the University of Florida, where this installation's prototype was created. The palette reflects the vibrant visual language of Afrofuturist aesthetics, connecting the digital cityscape to the cultural and artistic movements that inform the project's vision.
+
 ## Cultural & Artistic Inspiration
 
 ### The Origins of Techno in Detroit
 
-CASA DETROIT 2026 honors the legacy of techno music, born in the 1980s in Detroit, Michigan. The project draws inspiration from the "Belleville Three"—the three high school friends from Belleville, Michigan who pioneered the genre:
+My house is Your House 2026 honors the legacy of techno music, born in the 1980s in Detroit, Michigan. The project draws inspiration from the "Belleville Three"—the three high school friends from Belleville, Michigan who pioneered the genre:
 
 - **Juan Atkins** - Often called the "Originator," credited with creating the first techno tracks and coining the term "techno"
 - **Derrick May** - Known for his emotional, melodic style under the alias Rhythim Is Rhythim, bringing depth and soul to the genre
@@ -45,7 +49,7 @@ CASA DETROIT 2026 honors the legacy of techno music, born in the 1980s in Detroi
 
 ### Afrofuturism & Post-Industrial Speculation
 
-The visual language of CASA DETROIT 2026 explores Afrofuturist themes—a cultural aesthetic that combines science fiction, historical fiction, fantasy, and Afrocentrism to reimagine the future through a Black cultural lens. The project speculates on:
+The visual language of My house is Your House 2026 explores Afrofuturist themes—a cultural aesthetic that combines science fiction, historical fiction, fantasy, and Afrocentrism to reimagine the future through a Black cultural lens. The project speculates on:
 
 - **Post-Industrial Transformation:** Imagining how Detroit's industrial past might evolve into new forms of urban life
 - **Technological Reclamation:** Visualizing how technology might be reimagined and repurposed in speculative futures
@@ -66,7 +70,7 @@ Techno emerged in 1980s Detroit not merely as a musical genre, but as a form of 
 
 ### Early Video Game Aesthetics
 
-CASA DETROIT 2026 draws visual inspiration from the nascent video game industry of the 1980s—the same era that gave birth to techno. The project incorporates:
+My house is Your House 2026 draws visual inspiration from the nascent video game industry of the 1980s—the same era that gave birth to techno. The project incorporates:
 
 - **Pixelated Simplicity:** The geometric, simplified forms echo early arcade and home console graphics, where technical limitations became aesthetic choices
 - **Retro-Futurism:** The visual language combines 1980s visions of the future with contemporary digital aesthetics, creating a bridge between past technological imaginations and present realities
@@ -99,7 +103,7 @@ These aesthetic choices connect techno's origins to the broader technological cu
 
 ## How to Use
 
-1. Visit the live app: [CASA DETROIT 2026](https://marlonbarrios.github.io/detroit/)
+1. Visit the live app: [My house is Your House 2026](https://marlonbarrios.github.io/detroit/)
 2. Click anywhere on the screen to start the visualization and music.
 3. Enjoy the evolving patterns of colors and shapes synchronized with the pulse of Detroit techno.
 4. Press the spacebar to play/pause the audio.
@@ -140,7 +144,7 @@ Marlon Barrios Solano is an artist and programmer with a passion for merging tec
 
 ## Live App
 
-Play and experience CASA DETROIT 2026 here: [https://marlonbarrios.github.io/detroit/](https://marlonbarrios.github.io/detroit/)
+Play and experience My house is Your House 2026 here: [https://marlonbarrios.github.io/detroit/](https://marlonbarrios.github.io/detroit/)
 
 ## Tags
 

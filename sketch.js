@@ -1,4 +1,4 @@
-//CASA DETROIT 2026
+//My house is Your House 2026
 //code by Marlon Barrios Solano
 // Inspired by matt DesLauriers
 
@@ -76,6 +76,141 @@ let showSmoke = false;            // y
 let showExplosions = false;       // (part of y)
 let showICECars = false;          // i - ICE surveillance vehicles
 let showBiplane = false;          // g - Biplane with banner
+
+// COLOR PALETTE SYSTEM
+// User-provided hex colors converted to HSL
+const colorPalette = [
+  {hex: '#9c7db8', h: 270, s: 33, l: 60},  // Purple/lavender
+  {hex: '#53bf9e', h: 165, s: 50, l: 55},  // Teal/cyan-green
+  {hex: '#179ed9', h: 200, s: 82, l: 47},  // Blue
+  {hex: '#aacf37', h: 75, s: 60, l: 51},   // Lime/yellow-green
+  {hex: '#db166c', h: 335, s: 83, l: 47},  // Pink/magenta
+  {hex: '#e4bb21', h: 48, s: 78, l: 51},   // Yellow/gold
+  {hex: '#f78f25', h: 28, s: 92, l: 56},   // Orange
+  {hex: '#f15a24', h: 12, s: 88, l: 54}    // Red-orange
+];
+
+// Current palette indices for background and objects (ensures contrast)
+let currentBackgroundPaletteIndex = Math.floor(Math.random() * colorPalette.length); // Randomize on startup
+let currentObjectPaletteIndices = {}; // Store indices per object type
+
+// Function to convert hex to HSL
+function hexToHsl(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return {h: h * 360, s: s * 100, l: l * 100};
+}
+
+// Calculate contrast ratio between two colors (using lightness difference)
+function getContrastRatio(color1, color2) {
+  const l1 = color1.l;
+  const l2 = color2.l;
+  return Math.abs(l1 - l2);
+}
+
+// Get a contrasting color from palette (ensures minimum contrast)
+function getContrastingColor(backgroundIndex, minContrast = 15) {
+  const bgColor = colorPalette[backgroundIndex];
+  const availableColors = colorPalette.filter((_, idx) => idx !== backgroundIndex);
+  
+  // Find colors with sufficient contrast (lowered threshold for better visibility)
+  const contrastingColors = availableColors.filter(color => 
+    getContrastRatio(bgColor, color) >= minContrast
+  );
+  
+  // If we have contrasting colors, pick one randomly
+  if (contrastingColors.length > 0) {
+    const randomColor = contrastingColors[Math.floor(Math.random() * contrastingColors.length)];
+    return colorPalette.findIndex(c => c.hex === randomColor.hex);
+  }
+  
+  // Fallback: pick the most contrasting color (always return something different)
+  let maxContrast = 0;
+  let bestIndex = 0;
+  for (let i = 0; i < colorPalette.length; i++) {
+    if (i !== backgroundIndex) {
+      const contrast = getContrastRatio(bgColor, colorPalette[i]);
+      if (contrast > maxContrast) {
+        maxContrast = contrast;
+        bestIndex = i;
+      }
+    }
+  }
+  // If no good contrast found, just pick a different color
+  if (bestIndex === backgroundIndex) {
+    bestIndex = (backgroundIndex + 1) % colorPalette.length;
+  }
+  return bestIndex;
+}
+
+// Get a random color from palette (excluding background)
+function getRandomPaletteColor(excludeIndex = null) {
+  const availableIndices = colorPalette
+    .map((_, idx) => idx)
+    .filter(idx => idx !== excludeIndex);
+  if (availableIndices.length === 0) {
+    // Fallback: return a contrasting color if all excluded
+    return colorPalette[getContrastingColor(excludeIndex !== null ? excludeIndex : 0)];
+  }
+  const randomIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+  return colorPalette[randomIdx];
+}
+
+// Get palette color by index
+function getPaletteColor(index) {
+  return colorPalette[index % colorPalette.length];
+}
+
+// Update background to use palette with randomization
+function updateBackgroundFromPalette() {
+  // Randomly select a background color from palette
+  currentBackgroundPaletteIndex = Math.floor(Math.random() * colorPalette.length);
+  const bgColor = colorPalette[currentBackgroundPaletteIndex];
+  window.selectedBackgroundHue = bgColor.h;
+  console.log('Background color updated to:', bgColor.hex, 'hue:', bgColor.h);
+  return bgColor;
+}
+
+// Get object color ensuring contrast with background
+function getObjectColorFromPalette(objectType = 'default') {
+  // Always get a contrasting color (don't cache, allow variation)
+  const contrastingIndex = getContrastingColor(currentBackgroundPaletteIndex);
+  return colorPalette[contrastingIndex];
+}
+
+// Get a random palette color for objects (can be any color from palette)
+function getRandomPaletteColorForObject() {
+  return colorPalette[Math.floor(Math.random() * colorPalette.length)];
+}
+
+// Get palette color by index, cycling through palette
+function getPaletteColorByIndex(index) {
+  return colorPalette[index % colorPalette.length];
+}
+
+// Randomize object colors while maintaining contrast
+function randomizeObjectColors() {
+  Object.keys(currentObjectPaletteIndices).forEach(key => {
+    currentObjectPaletteIndices[key] = getContrastingColor(currentBackgroundPaletteIndex);
+  });
+}
 
 // GLOBAL STATE MACHINE - Cycles through all app states
 let globalStateIndex = 0; // Current state index
@@ -303,6 +438,10 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   // Cursor is now visible for better interaction with UI elements
 
+  // Initialize color palette on startup
+  updateBackgroundFromPalette();
+  randomizeObjectColors();
+
   // Show credits footer on home page
   const footer = document.getElementById('credits-footer');
   if (footer) {
@@ -436,7 +575,7 @@ function spawnPerson(hasParachute = false) {
     baseY: startY,
     direction: direction,
     speed: random(0.015, 0.04), // Extremely slow - maximum time to see details
-    hue: random(0, 360),
+    hue: getRandomPaletteColor(currentBackgroundPaletteIndex).h,
       scale: hasParachute ? random(2.0, 3.0) : random(1.0, 1.5), // Parachutists are LARGER
       targetScale: hasParachute ? random(2.0, 3.5) : random(1.0, 1.6), // Parachutists can grow larger
       minScale: hasParachute ? 1.5 : 0.5, // Parachutists don't get too small
@@ -515,7 +654,7 @@ function initializeRenaissanceCenter() {
     opacity: 0,
     targetOpacity: 0,
     phase: random(0, TWO_PI),
-    hue: 200, // Blue-gray industrial color
+    hue: getRandomPaletteColor(currentBackgroundPaletteIndex).h, // Use palette color
     windowPhase: 0
   };
 }
@@ -528,15 +667,15 @@ function initializeRobots() {
   // Define robot visual properties (hue, scale) - separate from names
   const robotProperties = [
     {
-      hue: 180, // Blue-green
+      hue: getRandomPaletteColor(currentBackgroundPaletteIndex).h, // From palette
       scale: 2.5, // Smaller size
     },
     {
-      hue: 280, // Purple
+      hue: getRandomPaletteColor(currentBackgroundPaletteIndex).h, // From palette
       scale: 3.0, // Smaller size
     },
     {
-      hue: 20, // Orange-red
+      hue: getRandomPaletteColor(currentBackgroundPaletteIndex).h, // From palette
       scale: 2.2, // Smaller size
     }
   ];
@@ -680,16 +819,8 @@ function initializeDrones() {
 }
 
 function spawnVintageCar() {
-  // Classic 1950s car colors
-  const carColors = [
-    {hue: 0, sat: 80, light: 50},   // Red
-    {hue: 200, sat: 70, light: 45}, // Blue
-    {hue: 30, sat: 75, light: 55},  // Orange
-    {hue: 120, sat: 60, light: 50}, // Green
-    {hue: 280, sat: 70, light: 50}, // Purple
-    {hue: 45, sat: 80, light: 60},  // Yellow
-    {hue: 0, sat: 0, light: 40}     // Black
-  ];
+  // Use palette colors for cars - ensure contrast with background
+  const carColor = getRandomPaletteColor(currentBackgroundPaletteIndex);
   
   const laneCount = 3;
   const laneSpacing = 40;
@@ -702,7 +833,7 @@ function spawnVintageCar() {
     (direction === 1 ? random(-200, -50) : random(width + 50, width + 200)) :
     random(0, width); // Sometimes spawn in the middle!
   
-  const color = carColors[Math.floor(random(carColors.length))];
+  const color = {hue: carColor.h, sat: carColor.s, light: carColor.l};
   const laneIndex = Math.floor(random(laneCount));
   const laneY = baseRoadY + (laneIndex * laneSpacing) - (laneCount - 1) * laneSpacing / 2;
   
@@ -734,7 +865,8 @@ function createCarExplosion(x, y, isSpawn) {
   if (!showExplosions) return; // Don't create explosions if disabled
   
   const particleCount = isSpawn ? 15 : 30; // More particles for explosions
-  const baseHue = isSpawn ? 60 : random(0, 60); // Yellow for spawn, red/orange for explosion
+  // Use palette colors for explosions
+  const baseHue = isSpawn ? colorPalette[5].h : getRandomPaletteColorForObject().h; // Yellow for spawn, random palette for explosion
   
   for (let p = 0; p < particleCount; p++) {
     const angle = random(TWO_PI);
@@ -745,7 +877,7 @@ function createCarExplosion(x, y, isSpawn) {
       vx: cos(angle) * speed,
       vy: sin(angle) * speed,
       size: random(4, 12),
-      hue: (baseHue + random(-30, 30)) % 360,
+      hue: getRandomPaletteColorForObject().h, // Use palette colors
       saturation: 80 + random(0, 20),
       lightness: 50 + random(0, 30),
       lifetime: 0,
@@ -785,7 +917,7 @@ function initializeMonorail() {
     
     monorailCars.push({
       position: startPos + (i * carSpacing * 0.5) % width,
-      hue: random(180, 240), // Industrial colors
+      hue: getRandomPaletteColorForObject().h, // Use palette colors
       speed: random(0.4, 0.8),
       phase: random(0, TWO_PI),
       direction: direction, // 1 = right, -1 = left
@@ -809,14 +941,17 @@ function initializeBuildings() {
     const hasSmokestack = buildingType === 0 && random() > 0.5; // Factories have smokestacks
     const isAbandoned = buildingType === 2;
     
+    // Get palette color for this building
+    const buildingPaletteColor = getPaletteColorByIndex(i);
     buildings.push({
       x: i * spacing + spacing * 0.2,
       baseWidth: (buildingType === 0 ? random(60, 120) : random(40, 90)) * 1.3, // 30% larger
       targetHeight: (buildingType === 0 ? random(150, 300) : random(80, 220)) * 1.3, // 30% larger
       currentHeight: 0,
-      hue: isAbandoned ? random(0, 30) : random(180, 240), // Grays/blues for industrial, reds for abandoned
-      saturation: isAbandoned ? random(20, 40) : random(30, 60),
-      lightness: isAbandoned ? random(30, 50) : random(40, 60),
+      // Use palette colors for buildings
+      hue: buildingPaletteColor.h,
+      saturation: buildingPaletteColor.s,
+      lightness: buildingPaletteColor.l,
       opacity: 0,
       targetOpacity: 0,
       buildingType: buildingType,
@@ -1417,8 +1552,9 @@ function returnToHome() {
   biplaneFadeTarget = 0.0;
   centralCirclesFadeTarget = 1.0; // Ensure central circles are visible at home
   
-  // Reset background to home state hue
-  window.selectedBackgroundHue = homeState.backgroundHue;
+  // Reset background to palette color
+  updateBackgroundFromPalette();
+  randomizeObjectColors(); // Randomize object colors when returning home
   
   // Reset demo state variables completely
   globalStateIndex = 0;
@@ -1619,7 +1755,9 @@ function keyPressed() {
       smokeFadeTarget = showSmoke ? 1.0 : 0.0;
       iceCarsFadeTarget = 0.0; // ICE cars not included in demo mode
       biplaneFadeTarget = showBiplane ? 1.0 : 0.0;
-      window.selectedBackgroundHue = firstState.backgroundHue;
+      // Use palette color for background
+      updateBackgroundFromPalette();
+      randomizeObjectColors(); // Randomize object colors on state change
       
       // Initialize elements if needed (with error handling)
       try {
@@ -1648,7 +1786,7 @@ function keyPressed() {
             moveDirection: 0,
             turnDistance: 600, // Increased for broader flight trajectory
             distanceTraveled: 0,
-            hue: 200,
+            hue: getRandomPaletteColorForObject().h,
             scale: 6.0,
             propPhase: 0
           });
@@ -1845,7 +1983,7 @@ function keyPressed() {
           moveDirection: i % 4, // Different starting directions
           turnDistance: 300, // Distance before turning
           distanceTraveled: 0, // Track distance on current path
-          hue: 220 + i * 30, // Different hues for each drone
+          hue: getPaletteColorByIndex(i).h, // Use palette colors for drones
           scale: 4.5, // Large and visible
           opacity: 1,
           rotation: 0,
@@ -1869,7 +2007,7 @@ function keyPressed() {
           y: random(height * 0.25, height * 0.45), // More visible middle area
           speed: random(0.0075, 0.015), // 50% SLOWER AGAIN - half the current speed
           direction: direction,
-          hue: random(200, 240), // Brighter blue range
+          hue: getRandomPaletteColorForObject().h, // Use palette colors
           scale: random(2.25, 3.0), // 75% OF ACTUAL SIZE
           propPhase: random(0, TWO_PI),
           wingTilt: 0
@@ -1887,7 +2025,7 @@ function keyPressed() {
         y: height * 0.85,
         speed: random(0.8, 1.5), // SLOW - consistent with other qwerty elements
         direction: random() > 0.5 ? 1 : -1,
-        hue: random(0, 30),
+        hue: getRandomPaletteColorForObject().h, // Use palette colors
         scale: random(1.4, 1.9), // 70% OF SIZE
         opacity: 1,
         lightPhase: random(0, TWO_PI),
@@ -1912,15 +2050,15 @@ function keyPressed() {
       // Define robot visual properties (hue, scale) - separate from names
       const robotProperties = [
         {
-          hue: 180, // Blue-green
+          hue: getRandomPaletteColor(currentBackgroundPaletteIndex).h, // From palette
           scale: 2.5, // Smaller size
         },
         {
-          hue: 280, // Purple
+          hue: getRandomPaletteColor(currentBackgroundPaletteIndex).h, // From palette
           scale: 3.0, // Smaller size
         },
         {
-          hue: 20, // Orange-red
+          hue: getRandomPaletteColor(currentBackgroundPaletteIndex).h, // From palette
           scale: 2.2, // Smaller size
         }
       ];
@@ -2031,7 +2169,7 @@ function keyPressed() {
         const y2 = random(height * 0.1, height * 0.9);
         // Use bright colors: cyan (180), magenta (300), yellow (60), red (0), green (120), blue (240)
         const brightHues = [0, 60, 120, 180, 240, 300];
-        const hue = brightHues[Math.floor(random(brightHues.length))];
+        const hue = getRandomPaletteColorForObject().h; // Use palette colors
         createLaser(x1, y1, x2, y2, hue);
       }
       console.log('Lasers enabled! Created', lasers.length, 'lasers');
@@ -2077,10 +2215,9 @@ function keyPressed() {
     }
     
     // Change background color - cycle through different hues
-    if (!window.backgroundHueIndex) window.backgroundHueIndex = 0;
-    const backgroundHues = [200, 240, 180, 120, 60, 0, 300, 280]; // Different color options
-    window.backgroundHueIndex = (window.backgroundHueIndex + 1) % backgroundHues.length;
-    window.selectedBackgroundHue = backgroundHues[window.backgroundHueIndex];
+    // Use palette colors instead
+    updateBackgroundFromPalette();
+    randomizeObjectColors(); // Randomize object colors when changing background
   } else if (key === 'a' || key === 'A') {
     // Toggle all states on/off
     const allElementsState = allAppStates.find(state => state.name === 'all_elements');
@@ -2188,7 +2325,9 @@ function keyPressed() {
       centralCirclesFadeTarget = showCentralCircles ? 1.0 : 0.0;
       
       if (!allOn) {
-        window.selectedBackgroundHue = allElementsState.backgroundHue;
+        // Use palette color for background
+        updateBackgroundFromPalette();
+        randomizeObjectColors();
       }
     }
   } else if (key === 'd' || key === 'D') {
@@ -2240,7 +2379,9 @@ function keyPressed() {
       smokeFadeTarget = showSmoke ? 1.0 : 0.0;
       iceCarsFadeTarget = showICECars ? 1.0 : 0.0;
       biplaneFadeTarget = showBiplane ? 1.0 : 0.0;
-      window.selectedBackgroundHue = firstState.backgroundHue;
+      // Use palette color for background
+      updateBackgroundFromPalette();
+      randomizeObjectColors(); // Randomize object colors on state change
     } else {
       // Exit demo mode - return to manual mode
       // Reset timing but keep current element states (user can manually control)
@@ -2356,7 +2497,7 @@ function drawHomeDescription() {
   for (let i = -2; i <= 2; i++) {
     for (let j = -2; j <= 2; j++) {
       if (i !== 0 || j !== 0) {
-        text("CASA DETROIT 2026", width / 2 + i, startY + 30 + j);
+        text("My house is Your House 2026", width / 2 + i, startY + 30 + j);
       }
     }
   }
@@ -2364,7 +2505,7 @@ function drawHomeDescription() {
   fill(255, 255, 255, 255); // Ensure full opacity
   textSize(48);
   textStyle(BOLD);
-  text("CASA DETROIT 2026", width / 2, startY + 30);
+  text("My house is Your House 2026", width / 2, startY + 30);
   
   // Helper function to draw text with outline - fixed to prevent overlapping
   function drawTextWithOutline(str, x, y, maxW, fontSize, lineH) {
@@ -2751,11 +2892,9 @@ function draw() {
         combinedHues.push(state.backgroundHue);
       }
       
-      // Average background hue from combined states
-      if (combinedHues.length > 0) {
-        const hueSum = combinedHues.reduce((a, b) => a + b, 0);
-        combinedState.backgroundHue = (hueSum / combinedHues.length) % 360;
-      }
+      // Use palette color for combined states
+      updateBackgroundFromPalette();
+      randomizeObjectColors();
       
       // Ensure mutual exclusivity: only one flying element at a time
       // Priority: drones > helicopters > planes > biplane
@@ -2836,7 +2975,7 @@ function draw() {
       }
       biplaneFadeTarget = biplaneProgressiveOpacityForChange;
       centralCirclesFadeTarget = showCentralCircles ? 1.0 : 0.0;
-      window.selectedBackgroundHue = combinedState.backgroundHue;
+      // Background already set by updateBackgroundFromPalette()
       globalLastStateChangeTime = currentTime;
       
       // Reset demo state timing for next state (5-12 seconds)
@@ -2991,7 +3130,7 @@ function draw() {
       
       const x2 = random(width * 0.1, width * 0.9);
       const y2 = random(height * 0.1, height * 0.9);
-      const hue = analyserNode && currentHue ? currentHue : random(0, 360);
+      const hue = getRandomPaletteColorForObject().h; // Use palette colors
       
       createLaser(x1, y1, x2, y2, hue);
       window.lastLaserSpawnTime = currentTime;
@@ -3035,28 +3174,37 @@ function draw() {
     map(timeOfDay, 0.25, 0.75, 0.3, 1, true) : // Day: brighter at noon
     map(timeOfDay < 0.25 ? timeOfDay + 1 : timeOfDay, 0.75, 1.25, 0.1, 0.3, true); // Night: darker
   
-  // Draw sky background with day/night colors
+  // Draw sky background using color palette - ALWAYS use palette
   colorMode(HSL);
-  // Use selected background hue if set, otherwise use default day/night colors
-  const defaultSkyHue = isNight ? 240 : 200; // Blue at night, lighter blue during day
-  const skyHue = window.selectedBackgroundHue !== undefined ? window.selectedBackgroundHue : defaultSkyHue;
-  const skySaturation = isNight ? 60 : 40;
-  const skyLightness = ambientLight * 50 + (analyserNode ? bassLevel * 5 : 0);
-  background(skyHue, skySaturation, skyLightness);
+  // Always use palette color for background
+  const bgColor = getPaletteColor(currentBackgroundPaletteIndex);
+  // Update window.selectedBackgroundHue to match palette
+  window.selectedBackgroundHue = bgColor.h;
+  
+  // Adjust lightness based on time of day and audio
+  const baseLightness = bgColor.l;
+  const adjustedLightness = constrain(
+    baseLightness * (ambientLight * 0.5 + 0.5) + (analyserNode ? bassLevel * 10 : 0),
+    20, 80
+  );
+  
+  background(bgColor.h, bgColor.s, adjustedLightness);
   
   // Draw sun if visible
   if (sunVisible) {
     push();
     colorMode(HSL);
     const sunSize = 40 + sin(millis() * 0.001) * 5; // Pulsing sun
-    fill(45, 90, 80, 0.9); // Yellow/orange sun
-  noStroke();
+    // Use palette colors for sun (yellow/orange colors)
+    const sunColor = colorPalette[5]; // Yellow/gold
+    fill(sunColor.h, sunColor.s, sunColor.l, 0.9);
+    noStroke();
     ellipse(sunX, sunY, sunSize, sunSize);
     
     // Sun glow
-    fill(45, 80, 90, 0.4);
+    fill(sunColor.h, sunColor.s, sunColor.l + 10, 0.4);
     ellipse(sunX, sunY, sunSize * 1.5, sunSize * 1.5);
-    fill(45, 70, 95, 0.2);
+    fill(sunColor.h, sunColor.s, sunColor.l + 15, 0.2);
     ellipse(sunX, sunY, sunSize * 2, sunSize * 2);
     pop();
   }
@@ -3072,14 +3220,15 @@ function draw() {
     const moonY = height * 0.2;
     const moonSize = 35;
     
-    // Moon glow
-    fill(220, 15, 90, 0.3);
+    // Moon glow - use palette color (light color)
+    const moonColor = colorPalette[5]; // Yellow/gold for moon
+    fill(moonColor.h, moonColor.s * 0.2, moonColor.l + 30, 0.3);
     noStroke();
     ellipse(moonX, moonY, moonSize * 1.8, moonSize * 1.8);
     ellipse(moonX, moonY, moonSize * 1.4, moonSize * 1.4);
     
-    // Main moon body
-    fill(220, 10, 85, 0.95); // Light gray/white moon
+    // Main moon body - use palette color
+    fill(moonColor.h, moonColor.s * 0.15, moonColor.l + 25, 0.95);
     noStroke();
     ellipse(moonX, moonY, moonSize, moonSize);
     
@@ -3087,20 +3236,21 @@ function draw() {
     const moonPhaseProgress = (timeOfDay < 0.25 ? timeOfDay + 1 : timeOfDay) - 0.75;
     const phaseOffset = map(moonPhaseProgress, 0, 0.5, -moonSize * 0.4, moonSize * 0.4);
     
-    // Dark side of moon (phase shadow)
-    fill(skyHue, skySaturation, skyLightness * 0.5, 0.9);
+    // Dark side of moon (phase shadow) - use background palette color
+    const bgPaletteColor = getPaletteColor(currentBackgroundPaletteIndex);
+    fill(bgPaletteColor.h, bgPaletteColor.s, bgPaletteColor.l * 0.5, 0.9);
     ellipse(moonX + phaseOffset, moonY, moonSize * 0.85, moonSize * 0.85);
     
-    // Moon craters (surface details)
-    fill(220, 5, 70, 0.6);
+    // Moon craters (surface details) - use palette color
+    fill(moonColor.h, moonColor.s * 0.1, moonColor.l + 10, 0.6);
     noStroke();
     ellipse(moonX - 8, moonY - 5, 4, 4);
     ellipse(moonX + 6, moonY + 8, 3, 3);
     ellipse(moonX + 10, moonY - 8, 2.5, 2.5);
     ellipse(moonX - 5, moonY + 10, 3.5, 3.5);
     
-    // Moon highlights
-    fill(220, 5, 95, 0.7);
+    // Moon highlights - use palette color
+    fill(moonColor.h, moonColor.s * 0.1, moonColor.l + 25, 0.7);
     ellipse(moonX - 10, moonY - 8, 5, 5);
     
     pop();
@@ -3215,15 +3365,37 @@ function draw() {
 
   colorMode(HSL);
   
-  // Make hue MORE reactive to bass - bass adds MORE energy to color shifts - MORE OBVIOUS
-  const bassHueInfluence = analyserNode ? bassLevel * 100 : 0; // Increased from 60 to 100
-  const targetHue = (maxFrequencyTarget + bassHueInfluence) % 360;
-  currentHue = damp(currentHue, targetHue, 0.015, deltaTime);
-
-  let hueA = currentHue;
-  let hueB = (hueA + 40 ) % 360;
-  const colorA = color(hueA, 30, 50);
-  const colorB = color(hueB, 30, 50);
+  // Use palette colors for central circles - ensure contrast with background
+  const bgPaletteColor = getPaletteColor(currentBackgroundPaletteIndex);
+  // Get two different contrasting colors for circles (not the background color)
+  // Force different colors - pick colors that are definitely different
+  let contrastingIndex1 = (currentBackgroundPaletteIndex + 1) % colorPalette.length;
+  let contrastingIndex2 = (currentBackgroundPaletteIndex + 2) % colorPalette.length;
+  // Make sure they're different from each other
+  if (contrastingIndex2 === contrastingIndex1) {
+    contrastingIndex2 = (contrastingIndex1 + 1) % colorPalette.length;
+  }
+  const circleColor1 = colorPalette[contrastingIndex1];
+  const circleColor2 = colorPalette[contrastingIndex2];
+  
+  // Ensure circles are ALWAYS visible - force high contrast
+  // Make sure circle colors are very different from background
+  const bgLightness = bgPaletteColor.l;
+  // If background is light, use dark circles; if dark, use light circles
+  const targetLightness1 = bgLightness > 50 ? 30 : 70;
+  const targetLightness2 = bgLightness > 50 ? 40 : 60;
+  
+  // Debug: log colors to console
+  console.log('Background:', bgPaletteColor.hex, 'Circle1:', circleColor1.hex, 'Circle2:', circleColor2.hex);
+  
+  // Use palette hues instead of calculated hues
+  let hueA = circleColor1.h;
+  let hueB = circleColor2.h;
+  const colorA = color(hueA, circleColor1.s, circleColor1.l);
+  const colorB = color(hueB, circleColor2.s, circleColor2.l);
+  
+  // Update currentHue for compatibility with other code
+  currentHue = hueA;
 
   const maxSize = dim * 0.45; // 50% smaller (was 0.90, now 0.45)
   const minSize = dim * 0.03;
@@ -3248,11 +3420,17 @@ function draw() {
   for (let i = 0; i < count; i++) {
     const t = map(i, 0, count - 1, 0, 1);
     
-    // Make bass shapes have MORE vibrant colors - MORE OBVIOUS
-    // Lower index = lower frequency = bass frequencies
+    // Use palette colors for circles - alternate between circle colors
+    const circleColor = i % 2 === 0 ? circleColor1 : circleColor2;
     const isBassShape = i < count / 3; // First third are bass frequencies
-    const saturation = isBassShape ? 50 + bassLevel * 50 : 50; // Increased from 30 to 50
-    const lightness = isBassShape ? 50 + bassLevel * 30 : 50; // Increased from 15 to 30
+    // Force high saturation for visibility (minimum 80)
+    const saturation = Math.max(circleColor.s, 80);
+    // Force lightness to be very different from background
+    const bgLightness = bgPaletteColor.l;
+    // Make circles much brighter or darker than background for maximum contrast
+    // Use different lightness for alternating circles
+    const baseTargetLightness = i % 2 === 0 ? (bgLightness > 50 ? 30 : 70) : (bgLightness > 50 ? 40 : 60);
+    const lightness = constrain(baseTargetLightness + (isBassShape ? bassLevel * 10 : 0), 25, 75);
     
     // Expanded frequency range to include bass (60-1500 Hz)
     const minBaseHz = 60;
@@ -3283,13 +3461,19 @@ function draw() {
     const signalContribution = min(enhancedSignal + basePulse, 0.6); // Cap signal contribution
     const size = baseSize + maxGrowth * signalContribution;
     
-    // Calculate alpha/opacity - make circles fully visible, then apply fade
-    const baseAlpha = 0.8 + (enhancedSignal + basePulse) * 0.2; // Alpha varies from 0.8 to 1.0 (very visible)
-    const circleAlpha = map(i, 0, count - 1, baseAlpha * 0.8, baseAlpha); // All circles highly visible
-    const finalAlpha = circleAlpha * centralCirclesOpacity; // Apply fade transition
+    // Apply centralCirclesOpacity to make circles visible
+    const finalAlpha = centralCirclesOpacity; // Use opacity control
     
-    // Create color with alpha (including fade)
-    const c = color((currentHue + 90 * ((i + 1) / count)) % 360, saturation, lightness, finalAlpha);
+    // Create color with alpha using palette colors - ensure high saturation for visibility
+    const circleHue = circleColor.h;
+    const finalSaturation = Math.max(saturation, 85); // Very high saturation for visibility
+    const finalLightness = constrain(lightness, 40, 60); // Ensure good contrast
+    const c = color(circleHue, finalSaturation, finalLightness, finalAlpha);
+    
+    // Debug: log first circle color
+    if (i === 0) {
+      console.log('Drawing circle with color:', circleColor.hex, 'hue:', circleHue, 'sat:', finalSaturation, 'light:', finalLightness, 'alpha:', finalAlpha);
+    }
     
     // Add position movement for more obvious animation
     const movementX = sin(millis() * 0.002 + i * 0.3) * enhancedSignal * 15;
@@ -3389,7 +3573,7 @@ function draw() {
     noStroke();
     textAlign(CENTER, CENTER);
     textSize(48); // Large title font
-    text("CASA DETROIT 2026", width / 2, height / 2 - dim * 0.4);
+    text("My house is Your House 2026", width / 2, height / 2 - dim * 0.4);
     
     // Show instructions
     textSize(28);
@@ -3582,13 +3766,17 @@ function drawBuildings() {
     // Smoother color transitions with lower damping
     if (building.buildingType === 0) {
       // Factories keep industrial gray/blue
-      building.hue = damp(building.hue, 200 + bassLevel * 20, 0.015, deltaTime);
+      // Keep building color from palette, but allow slight variation
+      const basePaletteColor = getPaletteColorByIndex(i % colorPalette.length);
+      building.hue = damp(building.hue, basePaletteColor.h, 0.015, deltaTime);
     } else if (building.isAbandoned) {
       // Abandoned buildings stay reddish/brown
       building.hue = damp(building.hue, 15 + bassLevel * 10, 0.01, deltaTime);
     } else {
       // Other buildings shift with music
-      building.hue = damp(building.hue, (currentHue + i * 20) % 360, 0.02, deltaTime);
+      // Keep building color from palette
+      const basePaletteColor = getPaletteColorByIndex(i % colorPalette.length);
+      building.hue = damp(building.hue, basePaletteColor.h, 0.02, deltaTime);
     }
     
     // Draw building if visible
@@ -4082,7 +4270,7 @@ function drawMonorail() {
     
     monorailCars.push({
       position: startPos + (monorailCars.length * carSpacing * 0.5) % width,
-      hue: random(180, 240),
+      hue: getRandomPaletteColor(currentBackgroundPaletteIndex).h,
       speed: random(0.4, 0.8),
       phase: random(0, TWO_PI),
       direction: direction,
@@ -4200,9 +4388,9 @@ function drawMonorail() {
     const carX = trackPos.x;
     const carY = trackPos.y - 50 + verticalOffset + beatBounce; // Doubled offset from -25 to -50
     
-    // Car color shifts with music and pulses on beats
-    const targetHue = (currentHue + i * 30) % 360;
-    car.hue = damp(car.hue, targetHue, 0.05, deltaTime);
+    // Car color from palette - ensure contrast with background
+    const carColor = getObjectColorFromPalette(`monorail_car_${i}`);
+    car.hue = carColor.h;
     
     // Car brightness pulses on beats
     const carBrightness = car.beatBoost > 0.3 ? 70 : 55;
@@ -4389,49 +4577,50 @@ function drawRobots() {
           name: 'robot_default', 
           speedRange: [0.2, 0.6], 
           durationRange: [2000, 6000],
-          hue: 200, saturation: 70, lightness: 60, scale: 3.9
+          // Use palette colors for robot states
+          hue: colorPalette[0].h, saturation: colorPalette[0].s, lightness: colorPalette[0].l, scale: 3.9
         },
         { 
           name: 'robot_red', 
           speedRange: [0.001, 0.05], 
           durationRange: [4000, 10000],
-          hue: 0, saturation: 100, lightness: 50, scale: 4.5
+          hue: colorPalette[7].h, saturation: colorPalette[7].s, lightness: colorPalette[7].l, scale: 4.5
         },
         { 
           name: 'robot_blue', 
           speedRange: [0.05, 0.2], 
           durationRange: [3000, 8000],
-          hue: 240, saturation: 80, lightness: 65, scale: 4.2
+          hue: colorPalette[2].h, saturation: colorPalette[2].s, lightness: colorPalette[2].l, scale: 4.2
         },
         { 
           name: 'robot_green', 
           speedRange: [0.2, 0.6], 
           durationRange: [2000, 6000],
-          hue: 120, saturation: 75, lightness: 55, scale: 4.0
+          hue: colorPalette[3].h, saturation: colorPalette[3].s, lightness: colorPalette[3].l, scale: 4.0
         },
         { 
           name: 'robot_yellow', 
           speedRange: [0.6, 2.5], 
           durationRange: [1000, 5000],
-          hue: 60, saturation: 90, lightness: 70, scale: 4.3
+          hue: colorPalette[5].h, saturation: colorPalette[5].s, lightness: colorPalette[5].l, scale: 4.3
         },
         { 
           name: 'robot_purple', 
           speedRange: [2.5, 6.0], 
           durationRange: [1000, 5000],
-          hue: 300, saturation: 85, lightness: 60, scale: 4.1
+          hue: colorPalette[0].h, saturation: colorPalette[0].s, lightness: colorPalette[0].l, scale: 4.1
         },
         { 
           name: 'robot_cyan', 
           speedRange: [0.001, 0.05], 
           durationRange: [4000, 10000],
-          hue: 180, saturation: 90, lightness: 70, scale: 4.4
+          hue: colorPalette[1].h, saturation: colorPalette[1].s, lightness: colorPalette[1].l, scale: 4.4
         },
         { 
           name: 'robot_orange', 
           speedRange: [0.05, 0.2], 
           durationRange: [3000, 8000],
-          hue: 30, saturation: 95, lightness: 60, scale: 4.6
+          hue: colorPalette[6].h, saturation: colorPalette[6].s, lightness: colorPalette[6].l, scale: 4.6
         }
       ];
       // Get ALL frequency levels - use them directly for movement
@@ -5087,8 +5276,11 @@ function drawVintageCars() {
     const verticalBounce = sin(car.phase) * carBassLevel * 3;
     car.y = car.baseY - verticalBounce;
     
-    // Color shifts slightly with music
-    car.hue = damp(car.hue, (currentHue + i * 40) % 360, 0.02, deltaTime);
+    // Car color from palette - ensure contrast with background
+    const carColor = getObjectColorFromPalette(`vintage_car_${i}`);
+    car.hue = carColor.h;
+    car.saturation = carColor.s;
+    car.lightness = carColor.l;
     
     // Draw 1950s car with opacity
     push();
@@ -6318,8 +6510,9 @@ function drawPeople() {
       const highFreqLevel = (safePresenceLevel * 0.6 + safeAirLevel * 0.4);
       reactiveHue = (currentHue + 240 + highFreqLevel * 50) % 360;
     }
-    const targetHue = (reactiveHue + i * 40) % 360;
-    person.hue = damp(person.hue, targetHue, 0.05, deltaTime);
+    // Use palette colors for people instead of calculated hues
+    const personPaletteColor = getPaletteColorByIndex(i % colorPalette.length);
+    person.hue = damp(person.hue, personPaletteColor.h, 0.05, deltaTime);
     
     // Smooth trail movement - reacts to differentiated frequency bands - use safe variables
     person.trailPhase += deltaTime * (0.4 + safeOverallEnergy * 0.3);
@@ -6806,7 +6999,9 @@ function drawParachutists() {
     scale(person.scale);
     
     colorMode(HSL);
-    const parachuteHue = (person.hue + 30) % 360; // Slightly different hue from person
+    // Use palette color for parachute (different from person)
+    const parachutePaletteColor = getPaletteColorByIndex((i + 1) % colorPalette.length);
+    const parachuteHue = parachutePaletteColor.h;
     
     // Parachute canopy (dome shape above person)
     const swayX = sin(person.parachutePhase) * 3; // Swaying motion
@@ -7171,7 +7366,7 @@ function drawPlanes() {
       y: random(height * 0.25, height * 0.45), // More visible middle area
       speed: random(0.0075, 0.015), // 50% SLOWER AGAIN - half the current speed
       direction: direction,
-      hue: random(200, 240), // Brighter blue range
+      hue: getRandomPaletteColorForObject().h, // Use palette colors
       scale: random(2.25, 3.0), // 75% OF ACTUAL SIZE
       propPhase: 0,
       wingTilt: 0
@@ -7407,7 +7602,7 @@ function drawAmbulances() {
       baseY: height * 0.92, // LOWER - closer to bottom
       speed: random(0.8, 1.5), // SLOW - consistent speed
       direction: direction,
-      hue: random(0, 30),
+      hue: getRandomPaletteColorForObject().h, // Use palette colors
       scale: random(1.4, 1.9), // 70% OF SIZE
       opacity: 1,
       lightPhase: random(0, TWO_PI),
@@ -8068,7 +8263,7 @@ function createLaser(x1, y1, x2, y2, hue) {
     y1: y1,
     x2: x2,
     y2: y2,
-    hue: hue || random(0, 360),
+    hue: hue || getRandomPaletteColorForObject().h, // Use palette colors
     lifetime: 0,
     maxLifetime: 3000, // Lasers last 3 seconds for better visibility
     opacity: 1.0
@@ -8201,7 +8396,7 @@ function drawRockets() {
           y: height * 0.9, // Start at bottom (ground level)
           vx: 0, // Will be calculated toward moon
           vy: -1.5, // Strong upward velocity (launches toward moon)
-          hue: random(0, 60), // Red/orange/yellow
+          hue: getRandomPaletteColorForObject().h, // Use palette colors
           scale: random(3.75, 5.0), // 4X SMALLER
           opacity: 1,
           lifetime: 0,
