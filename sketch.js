@@ -219,7 +219,7 @@ const allAppStates = [
     cars: true, people: true, parachutists: true, helicopters: true,
     tracks: true, trainCars: true, buildingsStatic: true, renaissance: true,
     buildingsMoving: true, drones: true, planes: true, ambulances: true,
-    rockets: false, robots: true, lasers: false, smoke: true, iceCars: true, biplane: true,
+    rockets: false, robots: true, lasers: false, smoke: true, iceCars: false, biplane: true,
     backgroundHue: 200
   },
   {
@@ -1601,7 +1601,7 @@ function keyPressed() {
       showRobots = firstState.robots;
       showLasers = firstState.lasers;
       showSmoke = firstState.smoke;
-      showICECars = firstState.iceCars;
+      showICECars = false; // ICE cars not included in demo mode
       carsFadeTarget = showCars ? 1.0 : 0.0;
       peopleFadeTarget = showPeople ? 1.0 : 0.0;
       parachutistsFadeTarget = showParachutists ? 1.0 : 0.0;
@@ -1617,7 +1617,7 @@ function keyPressed() {
       robotsFadeTarget = showRobots ? 1.0 : 0.0;
       lasersFadeTarget = showLasers ? 1.0 : 0.0;
       smokeFadeTarget = showSmoke ? 1.0 : 0.0;
-      iceCarsFadeTarget = showICECars ? 1.0 : 0.0;
+      iceCarsFadeTarget = 0.0; // ICE cars not included in demo mode
       biplaneFadeTarget = showBiplane ? 1.0 : 0.0;
       window.selectedBackgroundHue = firstState.backgroundHue;
       
@@ -1626,9 +1626,7 @@ function keyPressed() {
         if (showCars && vintageCars.length === 0) {
           initializeVintageCars();
         }
-        if (showICECars && iceCars.length === 0) {
-          spawnICECar(); // Spawn initial ICE car
-        }
+        // ICE cars not included in demo mode startup
         if (showPeople && people.length === 0) {
           initializePeople();
         }
@@ -2063,6 +2061,13 @@ function keyPressed() {
     } else if (!showBiplane) {
       biplane = null;
     }
+  } else if (key === 'i' || key === 'I') {
+    // Toggle ICE cars with fade - only works when key is pressed, not in demo or all mode
+    showICECars = !showICECars;
+    iceCarsFadeTarget = showICECars ? 1.0 : 0.0;
+    if (showICECars && iceCars.length === 0) {
+      spawnICECar(); // Spawn initial ICE car
+    }
   } else if (key === 'b' || key === 'B') {
     // Toggle smoke with fade
     showSmoke = !showSmoke;
@@ -2096,7 +2101,7 @@ function keyPressed() {
                     showRobots === allElementsState.robots &&
                     showLasers === allElementsState.lasers &&
                     showSmoke === allElementsState.smoke &&
-                    showICECars === allElementsState.iceCars &&
+                    showICECars === false &&
                     showBiplane === allElementsState.biplane &&
                     showCentralCircles === true; // Central circles should be on
       
@@ -2139,7 +2144,7 @@ function keyPressed() {
         showRobots = allElementsState.robots;
         showLasers = allElementsState.lasers;
         showSmoke = allElementsState.smoke;
-        showICECars = allElementsState.iceCars;
+        showICECars = false; // ICE cars not included in "all" mode
         showBiplane = allElementsState.biplane;
         showCentralCircles = true; // Also turn on central circles
         
@@ -2147,9 +2152,7 @@ function keyPressed() {
         if (showCars && vintageCars.length === 0) {
           initializeVintageCars();
         }
-        if (showICECars && iceCars.length === 0) {
-          spawnICECar(); // Spawn initial ICE car
-        }
+        // ICE cars not included in "all" mode
         if (showPeople && people.length === 0) {
           initializePeople();
         }
@@ -2180,7 +2183,7 @@ function keyPressed() {
       robotsFadeTarget = showRobots ? 1.0 : 0.0;
       lasersFadeTarget = showLasers ? 1.0 : 0.0;
       smokeFadeTarget = showSmoke ? 1.0 : 0.0;
-      iceCarsFadeTarget = showICECars ? 1.0 : 0.0;
+      iceCarsFadeTarget = 0.0; // ICE cars not included in demo mode
       biplaneFadeTarget = showBiplane ? 1.0 : 0.0;
       centralCirclesFadeTarget = showCentralCircles ? 1.0 : 0.0;
       
@@ -2219,7 +2222,7 @@ function keyPressed() {
       showRobots = firstState.robots;
       showLasers = firstState.lasers;
       showSmoke = firstState.smoke;
-      showICECars = firstState.iceCars;
+      showICECars = false; // ICE cars not included in demo mode
       carsFadeTarget = showCars ? 1.0 : 0.0;
       peopleFadeTarget = showPeople ? 1.0 : 0.0;
       parachutistsFadeTarget = showParachutists ? 1.0 : 0.0;
@@ -2741,7 +2744,8 @@ function draw() {
         combinedState.robots = combinedState.robots || state.robots;
         combinedState.lasers = combinedState.lasers || state.lasers;
         combinedState.smoke = combinedState.smoke || state.smoke;
-        combinedState.iceCars = combinedState.iceCars || state.iceCars;
+        // ICE cars excluded from demo mode - only show when 'i' key is pressed
+        // combinedState.iceCars = combinedState.iceCars || state.iceCars;
         // Note: biplane is handled in the mutual exclusivity logic above, don't override here
         combinedState.centralCircles = combinedState.centralCircles || (state.centralCircles || false);
         combinedHues.push(state.backgroundHue);
@@ -2797,7 +2801,7 @@ function draw() {
       showRobots = combinedState.robots;
       showLasers = combinedState.lasers;
       showSmoke = combinedState.smoke;
-      showICECars = combinedState.iceCars;
+      showICECars = false; // ICE cars not included in demo mode
       showCentralCircles = combinedState.centralCircles;
       carsFadeTarget = showCars ? 1.0 : 0.0;
       peopleFadeTarget = showPeople ? 1.0 : 0.0;
@@ -2875,9 +2879,7 @@ function draw() {
       if (showDrones && drones.length === 0) {
         initializeDrones();
       }
-      if (showICECars && iceCars.length === 0) {
-        spawnICECar(); // Spawn initial ICE car for demo mode
-      }
+      // ICE cars not included in demo mode
       if (showBiplane && !biplane) {
         initializeBiplane(); // Initialize biplane for demo mode
       }
@@ -3355,6 +3357,11 @@ function draw() {
     push(); 
     drawingContext.globalAlpha *= carsOpacity; 
     drawVintageCars(); 
+    pop(); 
+  }
+  if (iceCarsOpacity > 0.01) { 
+    push(); 
+    drawingContext.globalAlpha *= iceCarsOpacity; 
     drawICECars(); // Draw ICE surveillance vehicles
     pop(); 
   }
