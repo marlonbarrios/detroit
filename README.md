@@ -136,7 +136,7 @@ These aesthetic choices connect techno's origins to the broader technological cu
 
 ## About the Music
 
-The track "Monument 01" is an original composition by Michael Ramir C., designed to complement the visual experience with its deep techno rhythms and immersive soundscapes.
+The music is composed by Marlon Barrios Solano using AI, designed to complement the visual experience with its deep techno rhythms and immersive soundscapes.
 
 ## About the Author
 
